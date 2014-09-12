@@ -14,7 +14,7 @@ prep_data <- function(){
   ## in Functional Data Analysis, matplot() is used often for convenience.
   ## we'll opt to "melt" datasets and make nice(r) graphics in ggplot
   ## 'growth' is the data object from fda and contains Berkeley Study Data
-  with(growth, matplot(age, hgtf, hgtm, type=c("l","l"), col=c("pink","blue")))
+  ##with(growth, matplot(age, hgtf, hgtm, type=c("l","l"), col=c("pink","blue")))
   
   ## @knitr ggDataPrep
   ## get into ggplot2 data format.
@@ -47,6 +47,6 @@ prep_data <- function(){
   ## and the age over the columns (so we cast it into the matrix, 'boys',  as in the traditional
   ## Functional Data Analysis way of doing things).  dcast() is in library(reshape2)
   boys <- dcast(subset(gg.growth, sex=="male"), id~age)
-  boys[1:6,1:6]
-  
+  #boys[1:6,1:6]
+  boys
 }
