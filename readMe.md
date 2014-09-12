@@ -2,27 +2,17 @@
 Bruce Swihart  
 September 12, 2014  
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 
 ```r
-summary(cars)
+library(fda)
+library(ggplot2)
+library(reshape2)
+growth.mlt <- melt(growth[-3])  # don't need 3rd element since it is in rownames
+ggplot(growth.mlt, aes(x=Var1, y=value, group=Var2)) +
+  geom_line() + facet_wrap(~ L1)
 ```
 
-```
-##      speed           dist    
-##  Min.   : 4.0   Min.   :  2  
-##  1st Qu.:12.0   1st Qu.: 26  
-##  Median :15.0   Median : 36  
-##  Mean   :15.4   Mean   : 43  
-##  3rd Qu.:19.0   3rd Qu.: 56  
-##  Max.   :25.0   Max.   :120
-```
+![plot of chunk unnamed-chunk-1](./readMe_files/figure-html/unnamed-chunk-1.png) 
 
-You can also embed plots, for example:
 
-![plot of chunk unnamed-chunk-2](./readMe_files/figure-html/unnamed-chunk-2.png) 
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
