@@ -7,6 +7,9 @@
 #' to script in the examples.
 #' @param data_in an object returned from calculate_ses()
 #' @export
+#' @return prob.cens as a column added to data_in representing the probability of being censored at that time.
+#' @return instudy.sim as a column added to data_in representing whether that particular observation is instudy (1) or not (0)
+#' @return instudy as a column added to data_in builds upon instudy.sim in that once instudy.sim is 0 instudy is 0 for all remaining observation times
 #' @examples
 #' d<-prep_data()
 #' head(d)
@@ -15,8 +18,9 @@
 #' long <-make_long(with_ses)
 #' head(long)
 #' censored <- apply_censoring(long)
-#' head(censored)
+#' head(censored,18)
 apply_censoring <- function(data_in=NULL){
+  library(plyr)
   data_in$prob.cens <- .1*(1-(data_in$ses-min(data_in$ses))/(max(data_in$ses)-min(data_in$ses))) + 
                     .2*((data_in$age-min(data_in$age))/(max(data_in$age)-min(data_in$age)))
   #####################

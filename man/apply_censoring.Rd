@@ -8,6 +8,13 @@ apply_censoring(data_in = NULL)
 \arguments{
 \item{data_in}{an object returned from calculate_ses()}
 }
+\value{
+prob.cens as a column added to data_in representing the probability of being censored at that time.
+
+instudy.sim as a column added to data_in representing whether that particular observation is instudy (1) or not (0)
+
+instudy as a column added to data_in builds upon instudy.sim in that once instudy.sim is 0 instudy is 0 for all remaining observation times
+}
 \description{
 Takes output from make_long() and applies censoring
 by creating a made-up, linear, hard-coded relationship between the probability
@@ -23,6 +30,6 @@ with_ses <- calculate_ses(over_samp_mat)
 long <-make_long(with_ses)
 head(long)
 censored <- apply_censoring(long)
-head(censored)
+head(censored,18)
 }
 
