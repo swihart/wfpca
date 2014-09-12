@@ -27,5 +27,6 @@ long <-make_long(with_ses)
 head(long)
 censored <- apply_censoring(long)
 head(censored,18)
+observed_with_stipw <- calculate_stipw(censored,"keep")
 }
 
