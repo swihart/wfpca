@@ -1,9 +1,10 @@
 Package: wfpca
-Title: weighted functional prinicpal components analysis 
+Title: weighted functional prinicpal components analysis
 Version: 0.1
 Authors@R: "Bruce Swihart <bruce.swihart@gmail.com> [aut, cre]"
-Description: inverse probability weighting of censored longitudinal data enabling functional data analysis
-that corrects for survivor bias
-Depends: R (>= 3.1.1)
+Description: inverse probability weighting of censored longitudinal data
+    enabling functional data analysis that corrects for survivor bias
+Depends:
+    R (>= 3.1.1)
 License: GPL2
 LazyData: true
