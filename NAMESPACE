@@ -2,6 +2,7 @@
 
 export(apply_censoring)
 export(calculate_ses)
+export(calculate_stipw)
 export(make_long)
 export(prep_data)
 export(sample_data)
