@@ -1,4 +1,4 @@
-#' Sample the prepped data of the boys of the Berkeley Growth Study Data
+#' Make up SES (household income) relationship with final height for oversampled data
 #'
 #' Using the oversampling of "boys", the returned object from "sample_data()";
 #' imputes a made-up linear relationship between fabricated SES variable (think household income)
@@ -11,7 +11,7 @@
 #' d<-prep_data()
 #' head(d)
 #' over_samp_mat<-sample_data(d,1000)
-#' long_ses <- calculate_ses(over_samp_mat)
+#' with_ses <- calculate_ses(over_samp_mat)
 #' 
 calculate_ses <- function(data_in=NULL){
   ## @knitr SESHeight
@@ -22,4 +22,5 @@ calculate_ses <- function(data_in=NULL){
              (max(data_in[,32])-min(data_in[,32])) + 12 +
              rnorm(dim(data_in)[1])
   data_in$ses <- SES
+  data_in
 }
