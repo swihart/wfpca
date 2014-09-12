@@ -3,7 +3,7 @@
 \alias{sample_data}
 \title{Sample the prepped data of the boys of the Berkeley Growth Study Data}
 \usage{
-sample_data(data_in = boys, tot_subj = 1000)
+sample_data(data_in = NULL, tot_subj = 1000)
 }
 \arguments{
 \item{data_in}{an object returned from prep_data()}
