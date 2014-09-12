@@ -10,7 +10,7 @@ make_long(data_in = NULL)
 }
 \description{
 Takes wide format with individual covariates and makes it long while
-redoing the ids for a sensical melt.  Names are hard coded, so stick
+redoing the ids (original, oversampled ids retained as 'id', 'new.id' is unique) for a sensical melt.  Names are hard coded, so stick
 to script in the examples.
 }
 \examples{
