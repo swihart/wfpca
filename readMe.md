@@ -71,7 +71,24 @@ library(ggplot2);
 ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()
 ```
 
-![plot of chunk unnamed-chunk-1](./readMe_files/figure-html/unnamed-chunk-1.png) 
+![plot of chunk unnamed-chunk-1](./readMe_files/figure-html/unnamed-chunk-11.png) 
+
+```r
+## zoom!
+ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()+coord_cartesian(xlim=c(14.9,18.1),ylim=c(68,75))
+```
+
+![plot of chunk unnamed-chunk-1](./readMe_files/figure-html/unnamed-chunk-12.png) 
+
+```r
+## zoom! +facetting reveals overplotting
+## naive_non_parm_avg == naive_fpc
+##   wtd_non_parm_avg == weighted_fpc
+##   naive_fpc_pabw is distinct but in ball park
+ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()+coord_cartesian(xlim=c(14.9,18.1),ylim=c(69,75)) + facet_grid(.~approach) 
+```
+
+![plot of chunk unnamed-chunk-1](./readMe_files/figure-html/unnamed-chunk-13.png) 
 
 Note:  WE only used the boys from the Berkeley study:
 
