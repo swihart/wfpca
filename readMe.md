@@ -8,14 +8,6 @@ September 12, 2014
 library(fda)
 library(ggplot2)
 library(reshape2)
-growth.mlt <- melt(growth[-3])  # don't need 3rd element since it is in rownames
-ggplot(growth.mlt, aes(x=Var1, y=value, group=Var2)) +
-  geom_line() + facet_wrap(~ L1)
-```
-
-![plot of chunk unnamed-chunk-1](./readMe_files/figure-html/unnamed-chunk-11.png) 
-
-```r
 library(refund)
 library(nlme)
 library(devtools)
@@ -79,6 +71,17 @@ library(ggplot2);
 ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()
 ```
 
-![plot of chunk unnamed-chunk-1](./readMe_files/figure-html/unnamed-chunk-12.png) 
+![plot of chunk unnamed-chunk-1](./readMe_files/figure-html/unnamed-chunk-1.png) 
+
+Note:  WE only used the boys from the Berkeley study:
+
+
+```r
+  growth.mlt <- melt(growth[-3])  # don't need 3rd element since it is in rownames
+ggplot(growth.mlt, aes(x=Var1, y=value, group=Var2)) +
+  geom_line() + facet_wrap(~ L1)
+```
+
+![plot of chunk unnamed-chunk-2](./readMe_files/figure-html/unnamed-chunk-2.png) 
 
 
