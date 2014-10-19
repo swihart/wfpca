@@ -117,9 +117,9 @@ round(results,2)
 
 ```
 ##   naive_non_parm_avg wtd_non_parm_avg naive_fpc naive_fpc_pabw
-## 1               0.93              0.3      0.93           0.26
+## 1                1.3              0.5       1.3           0.36
 ##   weighted_fpc naive_lme
-## 1          0.3      0.75
+## 1          0.5      0.84
 ```
 
 
