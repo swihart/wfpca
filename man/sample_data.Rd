@@ -3,12 +3,14 @@
 \alias{sample_data}
 \title{Sample the prepped data of the boys of the Berkeley Growth Study Data}
 \usage{
-sample_data(data_in = NULL, tot_subj = 1000)
+sample_data(data_in = NULL, tot_subj = 1000, seed = 101)
 }
 \arguments{
 \item{data_in}{an object returned from prep_data()}
 
 \item{tot_subj}{total number of subjects sampled with replacement -- numeric, multiple of 100.}
+
+\item{seed}{an integer for set.seed(seed) to assist reproducible simulations}
 }
 \description{
 This returns an oversampling of "boys", the returned object from "prep_data()".

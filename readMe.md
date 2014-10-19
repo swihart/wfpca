@@ -16,10 +16,10 @@ library(wfpca)
 d<-prep_data()
 head(d)
 over_samp_mat<-sample_data(d,1000)
-with_ses <- calculate_ses(over_samp_mat, slope=50, intercept=0)
+with_ses <- calculate_ses(over_samp_mat, slope=100, intercept=22)
 long <-make_long(with_ses)
 head(long)
-censored <- apply_censoring(long)
+censored <- apply_censoring(long, ses_coef=.1, age_coef=.2)
 head(censored,18)
 observed_with_stipw <- calculate_stipw(censored,"omit")
 wtd_trajectories <- calculate_wtd_trajectories(observed_with_stipw)
@@ -117,9 +117,9 @@ round(results,2)
 
 ```
 ##   naive_non_parm_avg wtd_non_parm_avg naive_fpc naive_fpc_pabw
-## 1               1.01             0.18      1.01           0.24
+## 1               1.03              0.2      1.03           0.25
 ##   weighted_fpc naive_lme
-## 1         0.18      0.99
+## 1          0.2      0.99
 ```
 
 
@@ -132,7 +132,8 @@ Note:  WE only used the boys from the Berkeley study:
 
 ```r
   growth.mlt <- melt(growth[-3])  # don't need 3rd element since it is in rownames
-ggplot(growth.mlt, aes(x=Var1, y=value, group=Var2)) +
+  growth.mlt$inches = growth.mlt$value / 2.54
+ggplot(growth.mlt, aes(x=Var1, y=inches, group=Var2)) +
   geom_line() + facet_wrap(~ L1)
 ```
 
