@@ -5,6 +5,8 @@ Authors@R: "Bruce Swihart <bruce.swihart@gmail.com> [aut, cre]"
 Description: inverse probability weighting of censored longitudinal data
     enabling functional data analysis that corrects for survivor bias
 Depends:
-    R (>= 2.14), fda 
+    R (>= 2.14),
+    fda,
+    refund
 License: GPL2
 LazyData: true
