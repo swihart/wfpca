@@ -15,7 +15,8 @@ sample_data <- function(data_in=NULL, tot_subj=1000, seed=101){
   ## we set a seed for reproducibility and randomly sample with replacement
   ## nSampId subjects from 'boys' using a row number indicator, not ids.
   ## we then sort on the 32nd column, which is final recorded height
-  set.seed(seed)
+  10*seed
+  ##set.seed(seed)
   nSampId <- tot_subj # needs to be multiple of 100
   overSampRow <- sample(nrow(data_in), nSampId, replace=T)
   overSampMat <- data_in[overSampRow,]

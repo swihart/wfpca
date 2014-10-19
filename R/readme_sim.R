@@ -112,5 +112,6 @@ label=paste("sim_seed", sim_seed,
       "sim_age_coef", sim_age_coef,
       sep="_")
 
-saveRDS(results,paste0("results_",label,".RDS" ))
+##saveRDS(results,paste0("results_",label,".RDS" ))
+saveRDS(results,paste0("results_",round(100000*rnorm(1)),".RDS" ))
 }
