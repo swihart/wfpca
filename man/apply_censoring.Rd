@@ -3,10 +3,14 @@
 \alias{apply_censoring}
 \title{Apply censoring scheme that is related to SES}
 \usage{
-apply_censoring(data_in = NULL)
+apply_censoring(data_in = NULL, ses_coef = 0.1, age_coef = 0.2)
 }
 \arguments{
 \item{data_in}{an object returned from calculate_ses()}
+
+\item{ses_coef}{a number near .1 that controls how much 1-(ses_i -min(ses))/(max(ses)-min(ses)) contributes to the probability of censoring}
+
+\item{age_coef}{a number near .2 that controls how much (age - min(age))/(max(age)-min(age)) contributes to the probability of censoring}
 }
 \value{
 prob.cens as a column added to data_in representing the probability of being censored at that time.
@@ -18,7 +22,14 @@ instudy as a column added to data_in builds upon instudy.sim in that once instud
 \description{
 Takes output from make_long() and applies censoring
 by creating a made-up, linear, hard-coded relationship between the probability
-of being censored at each observation time and SES
+of being censored at each observation time and SES.  The relationship is as follows:
+}
+\details{
+prob.cens <- ses_coef*(1-(data_in$ses-min(data_in$ses))/(max(data_in$ses)-min(data_in$ses))) +
+             age_coef*(  (data_in$age-min(data_in$age))/(max(data_in$age)-min(data_in$age)))
+
+So that as age increases, so does the probability of a censoring event occurring, whereas as ses for an individual
+increases, the prob of a censoring event decreases.  The coefficients out front control how strong the effect is.
 Names are hard coded, so stick
 to script in the examples.
 }

@@ -16,7 +16,7 @@ library(wfpca)
 d<-prep_data()
 head(d)
 over_samp_mat<-sample_data(d,1000)
-with_ses <- calculate_ses(over_samp_mat)
+with_ses <- calculate_ses(over_samp_mat, slope=50, intercept=0)
 long <-make_long(with_ses)
 head(long)
 censored <- apply_censoring(long)
@@ -90,6 +90,43 @@ ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()+coo
 
 ![plot of chunk unnamed-chunk-1](./readMe_files/figure-html/unnamed-chunk-13.png) 
 
+```r
+## transform data for straightforward rmse calculations:
+one_row_per_age=dcast(means, age~approach, value.var="inches")
+## calculate rmse against the true_avg
+a=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_non_parm_avg"])^2))
+b=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"wtd_non_parm_avg"])^2))
+c=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_fpc"])^2))
+d=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_fpc_pabw"])^2))
+e=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"weighted_fpc"])^2))
+f=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_lme"])^2))
+results=data.frame(naive_non_parm_avg=a,
+             wtd_non_parm_avg  =b,
+             naive_fpc         =c,
+             naive_fpc_pabw    =d,
+             weighted_fpc      =e,
+             naive_lme         =f)
+```
+
+And we calculate rmses:
+
+
+```r
+round(results,2)
+```
+
+```
+##   naive_non_parm_avg wtd_non_parm_avg naive_fpc naive_fpc_pabw
+## 1               1.01             0.18      1.01           0.24
+##   weighted_fpc naive_lme
+## 1         0.18      0.99
+```
+
+
+
+
+
+
 Note:  WE only used the boys from the Berkeley study:
 
 
@@ -99,6 +136,6 @@ ggplot(growth.mlt, aes(x=Var1, y=value, group=Var2)) +
   geom_line() + facet_wrap(~ L1)
 ```
 
-![plot of chunk unnamed-chunk-2](./readMe_files/figure-html/unnamed-chunk-2.png) 
+![plot of chunk unnamed-chunk-3](./readMe_files/figure-html/unnamed-chunk-3.png) 
 
 

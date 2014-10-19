@@ -2,10 +2,18 @@
 #'
 #' Takes output from make_long() and applies censoring
 #' by creating a made-up, linear, hard-coded relationship between the probability
-#' of being censored at each observation time and SES  
+#' of being censored at each observation time and SES.  The relationship is as follows:
+#' 
+#' prob.cens <- ses_coef*(1-(data_in$ses-min(data_in$ses))/(max(data_in$ses)-min(data_in$ses))) + 
+#'              age_coef*(  (data_in$age-min(data_in$age))/(max(data_in$age)-min(data_in$age)))
+#'     
+#' So that as age increases, so does the probability of a censoring event occurring, whereas as ses for an individual 
+#' increases, the prob of a censoring event decreases.  The coefficients out front control how strong the effect is.     
 #' Names are hard coded, so stick
 #' to script in the examples.
 #' @param data_in an object returned from calculate_ses()
+#' @param ses_coef a number near .1 that controls how much 1-(ses_i -min(ses))/(max(ses)-min(ses)) contributes to the probability of censoring
+#' @param age_coef a number near .2 that controls how much (age - min(age))/(max(age)-min(age)) contributes to the probability of censoring
 #' @export
 #' @return prob.cens as a column added to data_in representing the probability of being censored at that time.
 #' @return instudy.sim as a column added to data_in representing whether that particular observation is instudy (1) or not (0)
@@ -19,10 +27,10 @@
 #' head(long)
 #' censored <- apply_censoring(long)
 #' head(censored,18)
-apply_censoring <- function(data_in=NULL){
+apply_censoring <- function(data_in=NULL, ses_coef=.1, age_coef=.2){
   library(plyr)
-  data_in$prob.cens <- .1*(1-(data_in$ses-min(data_in$ses))/(max(data_in$ses)-min(data_in$ses))) + 
-                    .2*((data_in$age-min(data_in$age))/(max(data_in$age)-min(data_in$age)))
+  data_in$prob.cens <- ses_coef*(1-(data_in$ses-min(data_in$ses))/(max(data_in$ses)-min(data_in$ses))) + 
+                       age_coef*(  (data_in$age-min(data_in$age))/(max(data_in$age)-min(data_in$age)))
   #####################
   
   ##data_in$prob.cens[data_in$age==1] <- 0 ## everyone has at least baseline value, set prob.cens to 0
