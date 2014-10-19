@@ -52,7 +52,7 @@ wtd_non_parm_avg$approach <- "wtd_non_parm_avg"
 ##c)  naive-FPC, 
 age_vec <- c(sort(unique(long$age)))
 unwtd_fncs <- dcast(data=wtd_trajectories, formula= newid~age, value.var="inches")
-fpca_unwtd_fncs <- fpca.face(Y=as.matrix(unwtd_fncs[,-1]), argvals=age_vec, knots=29)
+fpca_unwtd_fncs <- fpca.face(Y=as.matrix(unwtd_fncs[,-1]), argvals=age_vec, knots=26)
 naive_fpc <- data.frame(age=age_vec, V1=fpca_unwtd_fncs$mu, approach="naive_fpc")
 ##d) naive-FPC-post-adjusted-by-weights, and 
 pabw <- dcast(data=wtd_trajectories, formula= newid~age, value.var="stipw01.n")
