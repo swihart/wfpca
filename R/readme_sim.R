@@ -1,29 +1,39 @@
-# wfpca:  Weighted Functional Prinicpal Components Analysis
-Bruce Swihart  
-September 12, 2014  
-
-
-
-```r
+#' Run a simulation as displayed in the readMe
+#'
+#' Runs all the commands in the readMe to generate rmse for each method.
+#' Run several instances of this to do a "simulation study"
+#'  
+#' @param sim_seed passed to set.seed()       
+#' @param sample_size (defaults to 1000) and must be a multiple of 100
+#' @param sim_slope see slope in calculate_ses()
+#' @param sim_intercept see intercept in calculate_ses()
+#' @param sim_ses_coef see ses_coef in apply_censoring()
+#' @param sim_age_coef see age_coef in apply_censoring()
+#' @export
+#' @return results a data frame with rmse for each approach for that simulated dataset
+#' @examples
+#' ---
+readme_sim <- function(sim_seed=101, sample_size=1000, sim_slope=100, sim_intercept=12, 
+                       sim_ses_coef=.1, sim_age_coef=.2){
 library(fda)
 library(ggplot2)
 library(reshape2)
 library(refund)
 library(nlme)
 library(devtools)
-install_github("swihart/wfpca")
+#install_github("swihart/wfpca")
 library(wfpca)
 d<-prep_data()
-head(d)
-over_samp_mat<-sample_data(d,1000, seed=401)
-with_ses <- calculate_ses(over_samp_mat, slope=100, intercept=22)
+#head(d)
+over_samp_mat<-sample_data(d, sample_size, seed=sim_seed)
+with_ses <- calculate_ses(over_samp_mat, slope=sim_slope, intercept=sim_intercept)
 long <-make_long(with_ses)
-head(long)
-censored <- apply_censoring(long, ses_coef=.1, age_coef=.2)
-head(censored,18)
+#head(long)
+censored <- apply_censoring(long, ses_coef=sim_ses_coef, age_coef=sim_age_coef)
+#head(censored,18)
 observed_with_stipw <- calculate_stipw(censored,"omit")
 wtd_trajectories <- calculate_wtd_trajectories(observed_with_stipw)
-head(wtd_trajectories)
+#head(wtd_trajectories)
 
 
 ## truth, all data:
@@ -67,30 +77,15 @@ naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.fr
 means <- rbind(true_avg, naive_non_parm_avg, wtd_non_parm_avg, naive_fpc, naive_fpc_pabw, weighted_fpc, naive_lme)
 means$approach<-factor(means$approach, levels=unique(means$approach))
 colnames(means)[colnames(means)=="V1"]<- "inches"
-library(ggplot2);
-ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()
-```
-
-![plot of chunk unnamed-chunk-1](./readMe_files/figure-html/unnamed-chunk-11.png) 
-
-```r
+##library(ggplot2);
+##ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()
 ## zoom!
-ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()+coord_cartesian(xlim=c(14.9,18.1),ylim=c(68,75))
-```
-
-![plot of chunk unnamed-chunk-1](./readMe_files/figure-html/unnamed-chunk-12.png) 
-
-```r
+##ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()+coord_cartesian(xlim=c(14.9,18.1),ylim=c(68,75))
 ## zoom! +facetting reveals overplotting
 ## naive_non_parm_avg == naive_fpc
 ##   wtd_non_parm_avg == weighted_fpc
 ##   naive_fpc_pabw is distinct but in ball park
-ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()+coord_cartesian(xlim=c(14.9,18.1),ylim=c(69,75)) + facet_grid(.~approach) 
-```
-
-![plot of chunk unnamed-chunk-1](./readMe_files/figure-html/unnamed-chunk-13.png) 
-
-```r
+##ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()+coord_cartesian(xlim=c(14.9,18.1),ylim=c(69,75)) + facet_grid(.~approach) 
 ## transform data for straightforward rmse calculations:
 one_row_per_age=dcast(means, age~approach, value.var="inches")
 ## calculate rmse against the true_avg
@@ -101,42 +96,21 @@ d=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_fpc_pabw"])^2)
 e=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"weighted_fpc"])^2))
 f=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_lme"])^2))
 results=data.frame(naive_non_parm_avg=a,
-             wtd_non_parm_avg  =b,
-             naive_fpc         =c,
-             naive_fpc_pabw    =d,
-             weighted_fpc      =e,
-             naive_lme         =f)
-```
-
-And we calculate rmses:
-
-
-```r
-round(results,2)
-```
-
-```
-##   naive_non_parm_avg wtd_non_parm_avg naive_fpc naive_fpc_pabw
-## 1               0.93              0.3      0.93           0.26
-##   weighted_fpc naive_lme
-## 1          0.3      0.75
-```
+                   wtd_non_parm_avg  =b,
+                   naive_fpc         =c,
+                   naive_fpc_pabw    =d,
+                   weighted_fpc      =e,
+                   naive_lme         =f)
 
 
 
+label=paste("sim_seed", sim_seed, 
+      "sample_size", sample_size,
+      "sim_slope", sim_slope,
+      "sim_intercept", sim_intercept, 
+      "sim_ses_coef", sim_ses_coef,
+      "sim_age_coef", sim_age_coef,
+      sep="_")
 
-
-
-Note:  WE only used the boys ('hgtm') from the Berkeley study:
-
-
-```r
-  growth.mlt <- melt(growth[-3])  # don't need 3rd element since it is in rownames
-  growth.mlt$inches = growth.mlt$value / 2.54
-ggplot(growth.mlt, aes(x=Var1, y=inches, group=Var2)) +
-  geom_line() + facet_wrap(~ L1)
-```
-
-![plot of chunk unnamed-chunk-3](./readMe_files/figure-html/unnamed-chunk-3.png) 
-
-
+saveRDS(results,paste0("results_",label,".RDS" ))
+}

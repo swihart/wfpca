@@ -1,8 +1,8 @@
 #' Prep the Berkeley Growth Study Data
 #'
 #' This returns "boys".
-#' @param love Do you love cats? Defaults to TRUE.
-#' @keywords cats
+#' @param NONE
+#' @keywords NONE
 #' @export
 #' @examples
 #' d<-prep_data()

@@ -6,7 +6,7 @@
 prep_data()
 }
 \arguments{
-\item{love}{Do you love cats? Defaults to TRUE.}
+\item{NONE}{}
 }
 \description{
 This returns "boys".
@@ -15,5 +15,5 @@ This returns "boys".
 d<-prep_data()
 head(d)
 }
-\keyword{cats}
+\keyword{NONE}
 
