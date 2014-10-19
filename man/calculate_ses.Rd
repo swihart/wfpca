@@ -3,10 +3,16 @@
 \alias{calculate_ses}
 \title{Make up SES (household income) relationship with final height for oversampled data}
 \usage{
-calculate_ses(data_in = NULL)
+calculate_ses(data_in = NULL, slope = 100, intercept = 12)
 }
 \arguments{
 \item{data_in}{an object returned from sample_data()}
+
+\item{slope}{a number that determines the linear relationship of final height and SES.
+For instance, if slope=100 and intercept=12, then the SES for individual i is
+SES(i) = 100*( height(i) - minimum of all heights )/(max of all heights - min of all heights) + 12 + rnorm(1)}
+
+\item{intercept}{a number, see explanation of slope}
 }
 \description{
 Using the oversampling of "boys", the returned object from "sample_data()";
