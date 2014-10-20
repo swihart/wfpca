@@ -46,7 +46,7 @@ prep_data <- function(){
   ## which takes the "melted" gg.growth for only males and makes it 1 row to 1 id
   ## and the age over the columns (so we cast it into the matrix, 'boys',  as in the traditional
   ## Functional Data Analysis way of doing things).  dcast() is in library(reshape2)
-  boys <- dcast(subset(gg.growth, sex=="male"), id~age)
+  boys <- dcast(subset(gg.growth, sex=="male"), id~age, value.var="inches")
   #boys[1:6,1:6]
-  boys
+  #boys
 }
