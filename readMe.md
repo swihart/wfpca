@@ -117,9 +117,9 @@ round(results,2)
 
 ```
 ##   naive_non_parm_avg wtd_non_parm_avg naive_fpc naive_fpc_pabw
-## 1               1.54             0.39      1.54           0.56
+## 1               1.26             0.49      1.26           0.44
 ##   weighted_fpc naive_lme
-## 1         0.39       0.9
+## 1         0.49      0.82
 ```
 
 
@@ -131,6 +131,29 @@ We did a simulation for a 1000 instances and got:
 #               1.05               0.45               1.05               0.48               0.45 
 #          naive_lme 
 #               0.86 
+```
+
+WE lowered sample sizes to 100 (from the 1000 above) for a 1000 instances and the "gains" of the approach were diminished:
+
+```r
+# > round(colMeans(rbind.all.files),2)
+# naive_non_parm_avg   wtd_non_parm_avg          naive_fpc     naive_fpc_pabw       weighted_fpc 
+#               1.37               1.20               1.37               1.23               1.20 
+#          naive_lme 
+#               0.89 
+```
+
+
+Going back to sample_size=1000, we increased the strength
+of prob.cens on age from 
+
+
+```r
+#> round(colMeans(rbind.all.files),2)
+# naive_non_parm_avg   wtd_non_parm_avg          naive_fpc     naive_fpc_pabw       weighted_fpc 
+#               1.24               0.97               1.24               1.18               0.97 
+#          naive_lme 
+#               0.85 
 ```
 
 
@@ -145,6 +168,6 @@ ggplot(growth.mlt, aes(x=Var1, y=inches, group=Var2)) +
   geom_line() + facet_wrap(~ L1)
 ```
 
-![plot of chunk unnamed-chunk-4](./readMe_files/figure-html/unnamed-chunk-4.png) 
+![plot of chunk unnamed-chunk-6](./readMe_files/figure-html/unnamed-chunk-6.png) 
 
 
