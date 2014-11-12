@@ -19,7 +19,11 @@ over_samp_mat<-sample_data(d,1000, seed=101)
 with_ses <- calculate_ses(over_samp_mat, slope=100, intercept=12)
 long <-make_long(with_ses)
 head(long)
-censored <- apply_censoring(long, ses_coef=.1, age_coef=.2)
+censored <- apply_censoring(long, ses_coef=.025, age_coef=.025)
+ddply(censored, .(age), function(w) sum(w$instudy==1) )
+melt.prob.cens=ddply(censored, .(newid,age), function(w) w$prob.cens )
+dcast.prob.cens=dcast(melt.prob.cens, newid~age, value.var="V1")
+apply(dcast.prob.cens, 2, function(w) round(range(w),2))
 head(censored,18)
 observed_with_stipw <- calculate_stipw(censored,"omit")
 wtd_trajectories <- calculate_wtd_trajectories(observed_with_stipw)
@@ -29,6 +33,14 @@ head(wtd_trajectories)
 ## truth, all data:
 true_avg <- ddply(long, .(age), function(w)  mean(w$inches))
 true_avg$approach<- "true_avg"
+##?? is kmeans on all data the same as an fpca on the all data??
+# age_vec <- c(sort(unique(long$age)))
+# truth_fpca <- dcast(data=long, formula= newid~age, value.var="inches")
+# fpca_truth_fpca <- fpca.face(Y=as.matrix(truth_fpca[,-1]), argvals=age_vec, knots=26)
+# identical(fpca_truth_fpca$mu, true_avg[,2])
+## cbind(fpca_truth_fpca$mu, true_avg[,2])
+# plot(fpca_truth_fpca$mu, true_avg[,2]);abline(a=0,b=1,col="blue")
+
 
 
 ## compare the bias of mean trajectories of the following approaches applied to the 
@@ -117,9 +129,9 @@ round(results,2)
 
 ```
 ##   naive_non_parm_avg wtd_non_parm_avg naive_fpc naive_fpc_pabw
-## 1               1.26             0.49      1.26           0.44
+## 1               0.23             0.04      0.23           0.04
 ##   weighted_fpc naive_lme
-## 1         0.49      0.82
+## 1         0.04      0.38
 ```
 
 
