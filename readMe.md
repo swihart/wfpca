@@ -1,6 +1,6 @@
 # wfpca:  Weighted Functional Prinicpal Components Analysis
 Bruce Swihart  
-September 12, 2014  
+January 10, 2015  
 
 
 
@@ -129,9 +129,9 @@ round(results,2)
 
 ```
 ##   naive_non_parm_avg wtd_non_parm_avg naive_fpc naive_fpc_pabw
-## 1               0.18             0.03      0.18           0.04
+## 1               0.26             0.05      0.26           0.05
 ##   weighted_fpc naive_lme
-## 1         0.03      0.37
+## 1         0.05      0.38
 ```
 
 
