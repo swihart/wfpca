@@ -129,9 +129,9 @@ round(results,2)
 
 ```
 ##   naive_non_parm_avg wtd_non_parm_avg naive_fpc naive_fpc_pabw
-## 1               0.23             0.04      0.23           0.04
+## 1               0.18             0.03      0.18           0.04
 ##   weighted_fpc naive_lme
-## 1         0.04      0.38
+## 1         0.03      0.37
 ```
 
 
@@ -169,6 +169,15 @@ of prob.cens on age from
 ```
 
 
+sample_size=1000, ses_coef=0.02, age_coef=0.02
+
+```r
+#> round(colMeans(rbind.all.files),2)
+#naive_non_parm_avg   wtd_non_parm_avg          naive_fpc 
+#              0.16               0.03               0.16 
+#    naive_fpc_pabw       weighted_fpc          naive_lme 
+#              0.03               0.03               0.34 
+```
 
 Note:  WE only used the boys ('hgtm') from the Berkeley study:
 
@@ -180,6 +189,6 @@ ggplot(growth.mlt, aes(x=Var1, y=inches, group=Var2)) +
   geom_line() + facet_wrap(~ L1)
 ```
 
-![plot of chunk unnamed-chunk-6](./readMe_files/figure-html/unnamed-chunk-6.png) 
+![plot of chunk unnamed-chunk-7](./readMe_files/figure-html/unnamed-chunk-7.png) 
 
 
