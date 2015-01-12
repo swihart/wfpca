@@ -87,10 +87,12 @@ naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.fr
 },
 warning =function(cond){
   naive_lme <- data.frame(age=age_vec, V1=NA, approach="naive_lme")  
-},
+  naive_lme
+  },
 error =function(cond){
   naive_lme <- data.frame(age=age_vec, V1=NA, approach="naive_lme")  
-})
+  naive_lme
+  })
 
 
 
