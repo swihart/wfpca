@@ -79,9 +79,20 @@ weighted_fpc <- data.frame(age=age_vec, V1=fpca_wtd_fncs$mu, approach="weighted_
 #naive_lme<-lmer(inches ~ ns(age, df=5) + (1+age|newid), data=observed_with_stipw)
 #predict(naive_lme, newdata=data.frame(age=age_vec), level=0)
 library(nlme)
-naive_lme_model<-lme(inches ~ ns(age, df=5), random=~age|newid, data=observed_with_stipw)
+tryCatch(
+{naive_lme_model<-lme(inches ~ ns(age, df=5), random=~age|newid, data=observed_with_stipw)
 ##predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0)
 naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0), approach="naive_lme")
+},
+warning ={
+  naive_lme <- data.frame(age=age_vec, V1=NA, approach="naive_lme")  
+},
+error ={
+  naive_lme <- data.frame(age=age_vec, V1=NA, approach="naive_lme")  
+})
+
+
+
 
 ## plot each approach's mean
 means <- rbind(true_avg, naive_non_parm_avg, wtd_non_parm_avg, naive_fpc, naive_fpc_pabw, weighted_fpc, naive_lme)
@@ -111,10 +122,16 @@ results=data.frame(naive_non_parm_avg=a,
                    naive_fpc_pabw    =d,
                    weighted_fpc      =e,
                    naive_lme         =f,
-                   perc_ltfu_18      =percent.missing.at.age.18)
+                   perc_ltfu_18      =percent.missing.at.age.18,
+                   sim_seed = sim_seed, 
+                   sample_size = sample_size,
+                   sim_slope = sim_slope,
+                   sim_intercept = sim_intercept, 
+                   sim_ses_coef = sim_ses_coef,
+                   sim_age_coef = sim_age_coef)
 
 
-
+## currently not using; going to put some of these in RDS itself
 label=paste("sim_seed", sim_seed, 
       "sample_size", sample_size,
       "sim_slope", sim_slope,
