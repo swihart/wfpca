@@ -14,7 +14,7 @@
 #' @examples
 #' ---
 readme_sim <- function(sim_seed=101, sample_size=1000, sim_slope=100, sim_intercept=12, 
-                       sim_ses_coef=.1, sim_age_coef=.2){
+                       sim_ses_coef=.01, sim_age_coef=.01){
 library(fda)
 library(ggplot2)
 library(reshape2)
@@ -30,11 +30,16 @@ with_ses <- calculate_ses(over_samp_mat, slope=sim_slope, intercept=sim_intercep
 long <-make_long(with_ses)
 #head(long)
 censored <- apply_censoring(long, ses_coef=sim_ses_coef, age_coef=sim_age_coef)
-#head(censored,18)
+ddply(censored, .(age), function(w) sum(w$instudy==1) )
+melt.prob.cens=ddply(censored, .(newid,age), function(w) w$prob.cens )
+dcast.prob.cens=dcast(melt.prob.cens, newid~age, value.var="V1")
+apply(dcast.prob.cens, 2, function(w) round(range(w),2))
+head(censored,18)
 observed_with_stipw <- calculate_stipw(censored,"omit")
 wtd_trajectories <- calculate_wtd_trajectories(observed_with_stipw)
 #head(wtd_trajectories)
-
+dcast.wtd.trajectories<-dcast(wtd_trajectories, newid~age, value.var="inches")
+percent.missing.at.age.18=sum(is.na(dcast.wtd.trajectories["18"]))/length(unlist(dcast.wtd.trajectories["18"]))
 
 ## truth, all data:
 true_avg <- ddply(long, .(age), function(w)  mean(w$inches))
@@ -70,7 +75,7 @@ weighted_fpc <- data.frame(age=age_vec, V1=fpca_wtd_fncs$mu, approach="weighted_
 #predict(naive_lme, newdata=data.frame(age=age_vec), level=0)
 library(nlme)
 naive_lme_model<-lme(inches ~ ns(age, df=5), random=~age|newid, data=observed_with_stipw)
-predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0)
+##predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0)
 naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0), approach="naive_lme")
 
 ## plot each approach's mean
@@ -100,7 +105,8 @@ results=data.frame(naive_non_parm_avg=a,
                    naive_fpc         =c,
                    naive_fpc_pabw    =d,
                    weighted_fpc      =e,
-                   naive_lme         =f)
+                   naive_lme         =f,
+                   perc_ltfu_18      =percent.missing.at.age.18)
 
 
 

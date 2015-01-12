@@ -5,7 +5,7 @@
 \title{Run a simulation as displayed in the readMe}
 \usage{
 readme_sim(sim_seed = 101, sample_size = 1000, sim_slope = 100,
-  sim_intercept = 12, sim_ses_coef = 0.1, sim_age_coef = 0.2)
+  sim_intercept = 12, sim_ses_coef = 0.01, sim_age_coef = 0.01)
 }
 \arguments{
 \item{sim_seed}{passed to set.seed()}
