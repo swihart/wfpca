@@ -40,7 +40,8 @@ censored$inches <- censored$inches + runif(length(censored$inches), -1/8,1/8)
 observed_with_stipw <- calculate_stipw(censored,"omit")
 wtd_trajectories <- calculate_wtd_trajectories(observed_with_stipw)
 #head(wtd_trajectories)
-dcast.wtd.trajectories<-dcast(wtd_trajectories, newid~age, value.var="inches")
+## do the following to get precent missing at age 18:
+dcast.wtd.trajectories<-dcast(calculate_wtd_trajectories(calculate_stipw(censored,"keep")), newid~age, value.var="stipw")
 percent.missing.at.age.18=sum(is.na(dcast.wtd.trajectories["18"]))/length(unlist(dcast.wtd.trajectories["18"]))
 
 
@@ -84,10 +85,10 @@ tryCatch(
 ##predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0)
 naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0), approach="naive_lme")
 },
-warning ={
+warning =function(cond){
   naive_lme <- data.frame(age=age_vec, V1=NA, approach="naive_lme")  
 },
-error ={
+error =function(cond){
   naive_lme <- data.frame(age=age_vec, V1=NA, approach="naive_lme")  
 })
 
