@@ -35,11 +35,16 @@ melt.prob.cens=ddply(censored, .(newid,age), function(w) w$prob.cens )
 dcast.prob.cens=dcast(melt.prob.cens, newid~age, value.var="V1")
 apply(dcast.prob.cens, 2, function(w) round(range(w),2))
 head(censored,18)
+## decided to add/sub 1/8 inch; "measurement error (?)"
+censored$inches <- censored$inches + runif(length(censored$inches), -1/8,1/8)
 observed_with_stipw <- calculate_stipw(censored,"omit")
 wtd_trajectories <- calculate_wtd_trajectories(observed_with_stipw)
 #head(wtd_trajectories)
 dcast.wtd.trajectories<-dcast(wtd_trajectories, newid~age, value.var="inches")
 percent.missing.at.age.18=sum(is.na(dcast.wtd.trajectories["18"]))/length(unlist(dcast.wtd.trajectories["18"]))
+
+
+
 
 ## truth, all data:
 true_avg <- ddply(long, .(age), function(w)  mean(w$inches))
