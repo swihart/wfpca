@@ -113,5 +113,5 @@ label=paste("sim_seed", sim_seed,
       sep="_")
 
 ##saveRDS(results,paste0("results_",label,".RDS" ))
-saveRDS(results,paste0("results_",round(100000*rnorm(1)),".RDS" ))
+saveRDS(results,paste0("results_",abs(round(10000000*rnorm(1))), sample(letters)[1],abs(round(10000000*rnorm(1))), ".RDS" ))
 }
