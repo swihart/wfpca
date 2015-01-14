@@ -81,19 +81,20 @@ weighted_fpc <- data.frame(age=age_vec, V1=fpca_wtd_fncs$mu, approach="weighted_
 #predict(naive_lme, newdata=data.frame(age=age_vec), level=0)
 library(nlme)
 naive_lme<-tryCatch(
-{naive_lme_model<-lme(inches ~ ns(age, df=75), random=~age|newid, data=observed_with_stipw);
-##predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0)
-naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0), approach="naive_lme")
+{
+  naive_lme_model<-lme(inches ~ ns(age, df=5), random=~age|newid, data=observed_with_stipw);
+  ##predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0)
+  naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0), approach="naive_lme")
 },
-warning =function(cond){
-  naive_lme <- data.frame(age=age_vec, V1=NA, approach="naive_lme")  ;
-  naive_lme
+  warning =function(cond){
+    naive_lme <- data.frame(age=age_vec, V1=NA, approach="naive_lme")  ;
+    naive_lme
   },
 error =function(cond){
   naive_lme <- data.frame(age=age_vec, V1=NA, approach="naive_lme")  ;
   naive_lme
   })
-
+summary(naive_lme)
 
 
 
@@ -134,7 +135,7 @@ results=data.frame(naive_non_parm_avg=a,
                    sim_age_coef = sim_age_coef)
 
 
-## currently not using; going to put some of these in RDS itself
+##  currently not using; going to put some of these in RDS itself
 label=paste("sim_seed", sim_seed, 
       "sample_size", sample_size,
       "sim_slope", sim_slope,
