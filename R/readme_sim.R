@@ -82,7 +82,7 @@ weighted_fpc <- data.frame(age=age_vec, V1=fpca_wtd_fncs$mu, approach="weighted_
 library(nlme)
 naive_lme<-tryCatch(
 {
-  naive_lme_model<-lme(inches ~ ns(age, df=5), random=~age|newid, data=observed_with_stipw);
+  naive_lme_model<-lme(inches ~ ns(age, df=5), random=~1|newid, data=observed_with_stipw);
   ##predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0)
   naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0), approach="naive_lme")
 },
