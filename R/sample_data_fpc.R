@@ -26,6 +26,9 @@ sample_data_fpc <- function(data_in=NULL, tot_subj=1000, seed=101, timepoints=ag
                       covmat) 
   
   sim_curves<-ff$eigenvectors%*%t(sim_scores) + ff$mu
+  ## with some meas error (upward bias) -- to see if lme fails less often
+  sim_curves<-sim_curves +  
+    matrix(runif(prod(dim(sim_curves)), -.125, 3), nrow=nrow(sim_curves))
   ##range(sim_curves[31,]) ## range seems smaller than what's observed...
   
   sim_data <- data.frame(cbind(1:tot_subj, t(sim_curves)))
