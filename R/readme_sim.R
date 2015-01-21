@@ -25,9 +25,10 @@ library(devtools)
 library(wfpca)
 d<-prep_data()
 #head(d)
-over_samp_mat<-sample_data(d, sample_size, seed=sim_seed)
+over_samp_mat<-sample_data_fpc(d, sample_size, seed=sim_seed, timepoints=as.numeric(names(d[,-1])))
 with_ses <- calculate_ses(over_samp_mat, slope=sim_slope, intercept=sim_intercept)
 long <-make_long(with_ses)
+age_vec <- c(sort(unique(long$age)))
 #head(long)
 censored <- apply_censoring(long, ses_coef=sim_ses_coef, age_coef=sim_age_coef)
 ddply(censored, .(age), function(w) sum(w$instudy==1) )
@@ -43,6 +44,8 @@ wtd_trajectories <- calculate_wtd_trajectories(observed_with_stipw)
 ## do the following to get precent missing at age 18:
 dcast.wtd.trajectories<-dcast(calculate_wtd_trajectories(calculate_stipw(censored,"keep")), newid~age, value.var="stipw")
 percent.missing.at.age.18=sum(is.na(dcast.wtd.trajectories["18"]))/length(unlist(dcast.wtd.trajectories["18"]))
+percent.missing = colSums(is.na(dcast.wtd.trajectories[,-1]))/length(unlist(dcast.wtd.trajectories["18"]))
+
 
 
 
@@ -134,6 +137,8 @@ results=data.frame(naive_non_parm_avg=a,
                    sim_ses_coef = sim_ses_coef,
                    sim_age_coef = sim_age_coef)
 
+## throw in missing at each age:
+results <- as.data.frame(t(unlist(c(results, as.data.frame(t(percent.missing))))))
 
 ##  currently not using; going to put some of these in RDS itself
 label=paste("sim_seed", sim_seed, 
