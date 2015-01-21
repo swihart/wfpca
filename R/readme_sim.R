@@ -85,7 +85,8 @@ weighted_fpc <- data.frame(age=age_vec, V1=fpca_wtd_fncs$mu, approach="weighted_
 library(nlme)
 naive_lme<-tryCatch(
 {
-  naive_lme_model<-lme(inches ~ ns(age, df=5), random=~1|newid, data=observed_with_stipw);
+  naive_lme_model<-lme(inches ~ bs(age, df=15), random=~1|newid, data=observed_with_stipw);
+  ##naive_lme_model<-lme(inches ~ bs(age, knots=c(2,10,17)), random=~1|newid, data=observed_with_stipw);
   ##predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0)
   naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0), approach="naive_lme")
 },
@@ -99,10 +100,27 @@ error =function(cond){
   })
 summary(naive_lme)
 
+wtd_lme<-tryCatch(
+{
+  wtd_lme_model<-lme(inches_wtd ~ bs(age, df=15), random=~1|newid, data=wtd_trajectories,
+                     na.action=na.omit);
+  ##predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0)
+  wtd_lme <- data.frame(age=age_vec, V1=predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0), approach="wtd_lme")
+},
+warning =function(cond){
+  wtd_lme <- data.frame(age=age_vec, V1=NA, approach="wtd_lme")  ;
+  wtd_lme
+},
+error =function(cond){
+  wtd_lme <- data.frame(age=age_vec, V1=NA, approach="wtd_lme")  ;
+  wtd_lme
+})
+summary(wtd_lme)
+
 
 
 ## plot each approach's mean
-means <- rbind(true_avg, naive_non_parm_avg, wtd_non_parm_avg, naive_fpc, naive_fpc_pabw, weighted_fpc, naive_lme)
+means <- rbind(true_avg, naive_non_parm_avg, wtd_non_parm_avg, naive_fpc, naive_fpc_pabw, weighted_fpc, naive_lme, wtd_lme)
 means$approach<-factor(means$approach, levels=unique(means$approach))
 colnames(means)[colnames(means)=="V1"]<- "inches"
 ##library(ggplot2);
@@ -123,12 +141,14 @@ c=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_fpc"])^2))
 d=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_fpc_pabw"])^2))
 e=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"weighted_fpc"])^2))
 f=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_lme"])^2))
+g=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"wtd_lme"])^2))
 results=data.frame(naive_non_parm_avg=a,
                    wtd_non_parm_avg  =b,
                    naive_fpc         =c,
                    naive_fpc_pabw    =d,
                    weighted_fpc      =e,
                    naive_lme         =f,
+                   wtd_lme           =g,
                    perc_ltfu_18      =percent.missing.at.age.18,
                    sim_seed = sim_seed, 
                    sample_size = sample_size,
@@ -139,6 +159,15 @@ results=data.frame(naive_non_parm_avg=a,
 
 ## throw in missing at each age:
 results <- as.data.frame(t(unlist(c(results, as.data.frame(t(percent.missing))))))
+
+
+# qplot(x=age_vec, y=wtd_lme$V1) + 
+#   geom_point(aes(x=age_vec,y=true_avg$V1),color="red") + 
+#   geom_point(aes(x=age_vec,y=true_avg$V1),color="blue")+
+#   geom_point(aes(x=age_vec,y=naive_lme$V1),color="orange")
+# 
+
+
 
 ##  currently not using; going to put some of these in RDS itself
 label=paste("sim_seed", sim_seed, 
