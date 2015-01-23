@@ -92,10 +92,12 @@ naive_lme<-tryCatch(
   naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0), approach="naive_lme")
 },
   warning =function(cond){
+    write.csv(observed_with_stipw, paste0("data_that_failed_nlme_lme_fit_",abs(rnorm(1,100,100)),".csv"), row.names=FALSE)
     naive_lme <- data.frame(age=age_vec, V1=NA, approach="naive_lme")  ;
     naive_lme
   },
 error =function(cond){
+  write.csv(observed_with_stipw, paste0("data_that_failed_nlme_lme_fit_",abs(rnorm(1,100,100)),".csv"), row.names=FALSE)
   naive_lme <- data.frame(age=age_vec, V1=NA, approach="naive_lme")  ;
   naive_lme
   })
