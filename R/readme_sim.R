@@ -28,6 +28,7 @@ d<-prep_data()
 over_samp_mat<-sample_data_fpc(d, sample_size, seed=sim_seed, timepoints=as.numeric(names(d[,-1])))
 with_ses <- calculate_ses(over_samp_mat, slope=sim_slope, intercept=sim_intercept)
 long <-make_long(with_ses)
+#ggplot(subset(long, newid %in% 1:1000), aes(x=age,y=inches, colour=factor(newid)))+geom_line()
 age_vec <- c(sort(unique(long$age)))
 #head(long)
 censored <- apply_censoring(long, ses_coef=sim_ses_coef, age_coef=sim_age_coef)
@@ -171,18 +172,18 @@ summary(wtd_lme)
 means <- rbind(true_avg, naive_non_parm_avg, wtd_non_parm_avg, naive_fpc, naive_fpc_pabw, weighted_fpc, naive_lme, wtd_lme)
 means$approach<-factor(means$approach, levels=unique(means$approach))
 colnames(means)[colnames(means)=="V1"]<- "inches"
-##library(ggplot2);
-##ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()
-## zoom!
-##ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()+coord_cartesian(xlim=c(14.9,18.1),ylim=c(68,75))
-## zoom! +facetting reveals overplotting
-## naive_non_parm_avg == naive_fpc
-##   wtd_non_parm_avg == weighted_fpc
-##   naive_fpc_pabw is distinct but in ball park
+# library(ggplot2);
+# ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()
+# #zoom!
+# ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()+coord_cartesian(xlim=c(14.9,18.1),ylim=c(68,75))
+# #zoom! +facetting reveals overplotting
+# naive_non_parm_avg == naive_fpc
+#   wtd_non_parm_avg == weighted_fpc
+#   naive_fpc_pabw is distinct but in ball park
 ##ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()+coord_cartesian(xlim=c(14.9,18.1),ylim=c(69,75)) + facet_grid(.~approach) 
 ## transform data for straightforward rmse calculations:
 one_row_per_age=dcast(means, age~approach, value.var="inches")
-# ## calculate rmse against the true_avg
+## calculate rmse against the true_avg
 # a=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_non_parm_avg"])^2))
 # b=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"wtd_non_parm_avg"])^2))
 # c=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_fpc"])^2))
@@ -239,8 +240,41 @@ results=data.frame(age               = one_row_per_age[,"age"],
                    percent_missing_below_median = percent.missing.below.median,
                    percent_missing_above_median = percent.missing.above.median)
 
+
 ## throw in missing at each age:
 ##results <- as.data.frame(t(unlist(c(results, as.data.frame(t(percent.missing))))))
+
+
+## instead of calculating errors at this stage, just return the predictions.
+## do errors in the post-simulation fashion
+# a=(one_row_per_age[,"true_avg"]
+# b=one_row_per_age[,"wtd_non_parm_avg"]
+# c=one_row_per_age[,"naive_fpc"]
+# d=one_row_per_age[,"naive_fpc_pabw"]
+# e=one_row_per_age[,"weighted_fpc"]
+# f=one_row_per_age[,"naive_lme"]
+# g=one_row_per_age[,"wtd_lme"]
+# h=one_row_per_age[,"naive_non_parm_avg"]
+# results=data.frame(age               = one_row_per_age[,"age"],
+#                    true_avg          =a,
+#                    naive_non_parm_avg=h,
+#                    wtd_non_parm_avg  =b,
+#                    naive_fpc         =c,
+#                    naive_fpc_pabw    =d,
+#                    weighted_fpc      =e,
+#                    naive_lme         =f,
+#                    wtd_lme           =g,
+#                    perc_ltfu_18      =percent.missing.at.age.18,
+#                    sim_seed = sim_seed, 
+#                    sample_size = sample_size,
+#                    sim_slope = sim_slope,
+#                    sim_intercept = sim_intercept, 
+#                    sim_ses_coef = sim_ses_coef,
+#                    sim_age_coef = sim_age_coef,
+#                    percent_missing = percent.missing,
+#                    percent_missing_below_median = percent.missing.below.median,
+#                    percent_missing_above_median = percent.missing.above.median)
+
 
 
 

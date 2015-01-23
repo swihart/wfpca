@@ -10,7 +10,7 @@
 #' d<-prep_data()
 #' head(d)
 #' overSampMat<-sample_data(d,1000)
-sample_data <- function(data_in=NULL, tot_subj=1000, seed=101){
+sample_data <- function(data_in=NULL, tot_subj=1000, seed=101, timepoints=as.numeric(names(data_in[,-1]))){
   ## @knitr sampleBoys
   ## we set a seed for reproducibility and randomly sample with replacement
   ## nSampId subjects from 'boys' using a row number indicator, not ids.
@@ -20,5 +20,9 @@ sample_data <- function(data_in=NULL, tot_subj=1000, seed=101){
   nSampId <- tot_subj # needs to be multiple of 100
   overSampRow <- sample(nrow(data_in), nSampId, replace=T)
   overSampMat <- data_in[overSampRow,]
+  ## with perturbation...
+  overSampMat.pert <- overSampMat[,-1] + runif(nrow(overSampMat),-2,2)
+  overSampMat <- cbind(overSampMat$id, overSampMat.pert)
+  colnames(overSampMat)[1] <- "id"
   overSampMat <- overSampMat[order(overSampMat[,32],decreasing=TRUE),]
 }
