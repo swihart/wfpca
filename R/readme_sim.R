@@ -83,6 +83,7 @@ weighted_fpc <- data.frame(age=age_vec, V1=fpca_wtd_fncs$mu, approach="weighted_
 #naive_lme<-lmer(inches ~ ns(age, df=5) + (1+age|newid), data=observed_with_stipw)
 #predict(naive_lme, newdata=data.frame(age=age_vec), level=0)
 library(nlme)
+library(lme4)
 naive_lme<-tryCatch(
 {
   naive_lme_model<-lme(inches ~ bs(age, df=15), random=~1|newid, data=observed_with_stipw);
@@ -100,13 +101,38 @@ error =function(cond){
   })
 summary(naive_lme)
 
+## I have two wtd_lme chunks -- only have one uncommented at a time!
+## the one immediately preceding this comment is lme(of wtd inches);
+## whereas the other one below it are lme4::lmer of inches.
+# wtd_lme<-tryCatch(
+# {
+#   wtd_lme_model<-lme(inches_wtd ~ bs(age, df=15), random=~1|newid, data=wtd_trajectories,
+#                      na.action=na.omit);
+#   ##predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0)
+#   wtd_lme <- data.frame(age=age_vec, V1=predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0), approach="wtd_lme")
+# },
+# warning =function(cond){
+#   wtd_lme <- data.frame(age=age_vec, V1=NA, approach="wtd_lme")  ;
+#   wtd_lme
+# },
+# error =function(cond){
+#   wtd_lme <- data.frame(age=age_vec, V1=NA, approach="wtd_lme")  ;
+#   wtd_lme
+# })
+# summary(wtd_lme)
+# 
+
 wtd_lme<-tryCatch(
 {
-  wtd_lme_model<-lme(inches_wtd ~ bs(age, df=15), random=~1|newid, data=wtd_trajectories,
+#   wtd_lme_model<-lme(inches_wtd ~ bs(age, df=15), random=~1|newid, data=wtd_trajectories,
+#                      na.action=na.omit);
+  wtd_lme_model<-lmer(inches ~ bs(age, df=15) + (age|newid), data=wtd_trajectories,
                      na.action=na.omit);
   ##predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0)
-  wtd_lme <- data.frame(age=age_vec, V1=predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0), approach="wtd_lme")
-},
+  ##wtd_lme <- data.frame(age=age_vec, V1=predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0), approach="wtd_lme")
+## note: below, use re.form=~0 in lme4:predict is equivalent to level=0 in nlme:lme
+  wtd_lme <- data.frame(age=age_vec, V1=predict(wtd_lme_model, newdata=data.frame(age=age_vec), re.form=~0), approach="wtd_lme")
+  },
 warning =function(cond){
   wtd_lme <- data.frame(age=age_vec, V1=NA, approach="wtd_lme")  ;
   wtd_lme
@@ -116,6 +142,7 @@ error =function(cond){
   wtd_lme
 })
 summary(wtd_lme)
+
 
 
 
