@@ -126,7 +126,7 @@ wtd_lme<-tryCatch(
 {
 #   wtd_lme_model<-lme(inches_wtd ~ bs(age, df=15), random=~1|newid, data=wtd_trajectories,
 #                      na.action=na.omit);
-  wtd_lme_model<-lmer(inches ~ bs(age, df=15) + (age|newid), data=wtd_trajectories,
+  wtd_lme_model<-lmer(inches ~ bs(age, df=15) + (1|newid), data=wtd_trajectories,
                      na.action=na.omit);
   ##predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0)
   ##wtd_lme <- data.frame(age=age_vec, V1=predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0), approach="wtd_lme")
@@ -134,11 +134,11 @@ wtd_lme<-tryCatch(
   wtd_lme <- data.frame(age=age_vec, V1=predict(wtd_lme_model, newdata=data.frame(age=age_vec), re.form=~0), approach="wtd_lme")
   },
 warning =function(cond){
-  wtd_lme <- data.frame(age=age_vec, V1=NA, approach="wtd_lme")  ;
+  wtd_lme <- data.frame(age=age_vec, V1=cond, approach="wtd_lme")  ;
   wtd_lme
 },
 error =function(cond){
-  wtd_lme <- data.frame(age=age_vec, V1=NA, approach="wtd_lme")  ;
+  wtd_lme <- data.frame(age=age_vec, V1=cond, approach="wtd_lme")  ;
   wtd_lme
 })
 summary(wtd_lme)
