@@ -42,9 +42,23 @@ observed_with_stipw <- calculate_stipw(censored,"omit")
 wtd_trajectories <- calculate_wtd_trajectories(observed_with_stipw)
 #head(wtd_trajectories)
 ## do the following to get precent missing at age 18:
+## overall:
 dcast.wtd.trajectories<-dcast(calculate_wtd_trajectories(calculate_stipw(censored,"keep")), newid~age, value.var="stipw")
 percent.missing.at.age.18=sum(is.na(dcast.wtd.trajectories["18"]))/length(unlist(dcast.wtd.trajectories["18"]))
 percent.missing = colSums(is.na(dcast.wtd.trajectories[,-1]))/length(unlist(dcast.wtd.trajectories["18"]))
+
+## below/above median SES:
+dcast.wtd.trajectories<-dcast(calculate_wtd_trajectories(calculate_stipw(censored,"keep")), newid+ses~age, value.var="stipw")
+medianSES<-median(dcast.wtd.trajectories$ses, na.rm=TRUE)
+subbie<-subset(dcast.wtd.trajectories, ses <= medianSES,"18")
+percent.missing.at.age.18.below.median=sum(is.na(subbie))/nrow(subbie)
+subbie<-subset(dcast.wtd.trajectories, ses <= medianSES, select=c(-1,-2))
+percent.missing.below.median=colSums(is.na(subbie))/nrow(subbie)
+subbie<-subset(dcast.wtd.trajectories, ses  > medianSES,"18")
+percent.missing.at.age.18.above.median=sum(is.na(subbie))/nrow(subbie)
+subbie<-subset(dcast.wtd.trajectories, ses  > medianSES, select=c(-1,-2))
+percent.missing.above.median=colSums(is.na(subbie))/nrow(subbie)
+
 
 
 
@@ -86,11 +100,13 @@ library(nlme)
 library(lme4)
 naive_lme<-tryCatch(
 {
-  naive_lme_model<-lme(inches ~ bs(age, df=15), random=~1|newid, data=observed_with_stipw);
-  ##naive_lme_model<-lme(inches ~ bs(age, knots=c(2,10,17)), random=~1|newid, data=observed_with_stipw);
-  ##predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0)
-  naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0), approach="naive_lme")
-},
+  #naive_lme_model<-lme(inches ~ bs(age, df=15), random=~1|newid, data=observed_with_stipw);
+  #naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0), approach="naive_lme")
+  
+  naive_lme_model<-lmer(inches ~ bs(age, df=15) + (1|newid), data=observed_with_stipw);
+  naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), re.form=~0), approach="naive_lme")
+
+  },
   warning =function(cond){
     write.csv(observed_with_stipw, paste0("data_that_failed_nlme_lme_fit_",abs(rnorm(1,100,100)),".csv"), row.names=FALSE)
     naive_lme <- data.frame(age=age_vec, V1=NA, approach="naive_lme")  ;
@@ -126,20 +142,23 @@ summary(naive_lme)
 
 wtd_lme<-tryCatch(
 {
-#   wtd_lme_model<-lme(inches_wtd ~ bs(age, df=15), random=~1|newid, data=wtd_trajectories,
-#                      na.action=na.omit);
-  wtd_lme_model<-lmer(inches ~ bs(age, df=15) + (1|newid), data=wtd_trajectories,
-                     na.action=na.omit);
+  #   wtd_lme_model<-lme(inches_wtd ~ bs(age, df=15), random=~1|newid, data=wtd_trajectories,
+  #                      na.action=na.omit);
+  wtd_lme_model<-lmer(inches_wtd ~ bs(age, df=15) + (1|newid), data=wtd_trajectories,
+                      na.action=na.omit);
   ##predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0)
   ##wtd_lme <- data.frame(age=age_vec, V1=predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0), approach="wtd_lme")
-## note: below, use re.form=~0 in lme4:predict is equivalent to level=0 in nlme:lme
+  ## note: below, use re.form=~0 in lme4:predict is equivalent to level=0 in nlme:lme
   wtd_lme <- data.frame(age=age_vec, V1=predict(wtd_lme_model, newdata=data.frame(age=age_vec), re.form=~0), approach="wtd_lme")
-  },
+  
+},
 warning =function(cond){
+  write.csv(wtd_trajectories, paste0("data_that_failed_lme4_lmer_fit_",abs(rnorm(1,100,100)),".csv"), row.names=FALSE)
   wtd_lme <- data.frame(age=age_vec, V1=cond, approach="wtd_lme")  ;
   wtd_lme
 },
 error =function(cond){
+  write.csv(wtd_trajectories, paste0("data_that_failed_lme4_lmer_fit_",abs(rnorm(1,100,100)),".csv"), row.names=FALSE)
   wtd_lme <- data.frame(age=age_vec, V1=cond, approach="wtd_lme")  ;
   wtd_lme
 })
@@ -163,15 +182,46 @@ colnames(means)[colnames(means)=="V1"]<- "inches"
 ##ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()+coord_cartesian(xlim=c(14.9,18.1),ylim=c(69,75)) + facet_grid(.~approach) 
 ## transform data for straightforward rmse calculations:
 one_row_per_age=dcast(means, age~approach, value.var="inches")
-## calculate rmse against the true_avg
-a=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_non_parm_avg"])^2))
-b=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"wtd_non_parm_avg"])^2))
-c=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_fpc"])^2))
-d=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_fpc_pabw"])^2))
-e=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"weighted_fpc"])^2))
-f=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_lme"])^2))
-g=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"wtd_lme"])^2))
-results=data.frame(naive_non_parm_avg=a,
+# ## calculate rmse against the true_avg
+# a=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_non_parm_avg"])^2))
+# b=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"wtd_non_parm_avg"])^2))
+# c=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_fpc"])^2))
+# d=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_fpc_pabw"])^2))
+# e=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"weighted_fpc"])^2))
+# f=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_lme"])^2))
+# g=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"wtd_lme"])^2))
+# results=data.frame(naive_non_parm_avg=a,
+#                    wtd_non_parm_avg  =b,
+#                    naive_fpc         =c,
+#                    naive_fpc_pabw    =d,
+#                    weighted_fpc      =e,
+#                    naive_lme         =f,
+#                    wtd_lme           =g,
+#                    perc_ltfu_18      =percent.missing.at.age.18,
+#                    sim_seed = sim_seed, 
+#                    sample_size = sample_size,
+#                    sim_slope = sim_slope,
+#                    sim_intercept = sim_intercept, 
+#                    sim_ses_coef = sim_ses_coef,
+#                    sim_age_coef = sim_age_coef)
+# 
+# ## throw in missing at each age:
+# results <- as.data.frame(t(unlist(c(results, as.data.frame(t(percent.missing))))))
+
+
+
+
+## as opposed to calculating rmse against the true_avg as above;
+## we just calculate squared error so we have it for each age below:
+a=(one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_non_parm_avg"])^2
+b=(one_row_per_age[,"true_avg"]-one_row_per_age[,"wtd_non_parm_avg"])^2
+c=(one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_fpc"])^2
+d=(one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_fpc_pabw"])^2
+e=(one_row_per_age[,"true_avg"]-one_row_per_age[,"weighted_fpc"])^2
+f=(one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_lme"])^2
+g=(one_row_per_age[,"true_avg"]-one_row_per_age[,"wtd_lme"])^2
+results=data.frame(age               = one_row_per_age[,"age"],
+                   naive_non_parm_avg=a,
                    wtd_non_parm_avg  =b,
                    naive_fpc         =c,
                    naive_fpc_pabw    =d,
@@ -184,10 +234,14 @@ results=data.frame(naive_non_parm_avg=a,
                    sim_slope = sim_slope,
                    sim_intercept = sim_intercept, 
                    sim_ses_coef = sim_ses_coef,
-                   sim_age_coef = sim_age_coef)
+                   sim_age_coef = sim_age_coef,
+                   percent_missing = percent.missing,
+                   percent_missing_below_median = percent.missing.below.median,
+                   percent_missing_above_median = percent.missing.above.median)
 
 ## throw in missing at each age:
-results <- as.data.frame(t(unlist(c(results, as.data.frame(t(percent.missing))))))
+##results <- as.data.frame(t(unlist(c(results, as.data.frame(t(percent.missing))))))
+
 
 
 # qplot(x=age_vec, y=wtd_lme$V1) + 
