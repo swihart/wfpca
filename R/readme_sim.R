@@ -172,6 +172,23 @@ summary(wtd_lme)
 means <- rbind(true_avg, naive_non_parm_avg, wtd_non_parm_avg, naive_fpc, naive_fpc_pabw, weighted_fpc, naive_lme, wtd_lme)
 means$approach<-factor(means$approach, levels=unique(means$approach))
 colnames(means)[colnames(means)=="V1"]<- "inches"
+## return:
+results <- cbind(
+        sim_seed = sim_seed, 
+        sample_size = sample_size,
+        sim_slope = sim_slope,
+        sim_intercept = sim_intercept, 
+        sim_ses_coef = sim_ses_coef,
+        sim_age_coef = sim_age_coef,
+        perc_ltfu_18      =percent.missing.at.age.18,
+        percent_missing = percent.missing,
+        percent_missing_below_median = percent.missing.below.median,
+        percent_missing_above_median = percent.missing.above.median,
+        means)
+
+
+
+
 # library(ggplot2);
 # ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()
 # #zoom!
@@ -182,7 +199,7 @@ colnames(means)[colnames(means)=="V1"]<- "inches"
 #   naive_fpc_pabw is distinct but in ball park
 ##ggplot(means, aes(x=age,y=inches, colour=approach))+geom_point()+geom_path()+coord_cartesian(xlim=c(14.9,18.1),ylim=c(69,75)) + facet_grid(.~approach) 
 ## transform data for straightforward rmse calculations:
-one_row_per_age=dcast(means, age~approach, value.var="inches")
+#one_row_per_age=dcast(means, age~approach, value.var="inches")
 ## calculate rmse against the true_avg
 # a=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_non_parm_avg"])^2))
 # b=sqrt(mean((one_row_per_age[,"true_avg"]-one_row_per_age[,"wtd_non_parm_avg"])^2))
@@ -214,32 +231,32 @@ one_row_per_age=dcast(means, age~approach, value.var="inches")
 
 ## as opposed to calculating rmse against the true_avg as above;
 ## we just calculate squared error so we have it for each age below:
-a=(one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_non_parm_avg"])^2
-b=(one_row_per_age[,"true_avg"]-one_row_per_age[,"wtd_non_parm_avg"])^2
-c=(one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_fpc"])^2
-d=(one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_fpc_pabw"])^2
-e=(one_row_per_age[,"true_avg"]-one_row_per_age[,"weighted_fpc"])^2
-f=(one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_lme"])^2
-g=(one_row_per_age[,"true_avg"]-one_row_per_age[,"wtd_lme"])^2
-results=data.frame(age               = one_row_per_age[,"age"],
-                   naive_non_parm_avg=a,
-                   wtd_non_parm_avg  =b,
-                   naive_fpc         =c,
-                   naive_fpc_pabw    =d,
-                   weighted_fpc      =e,
-                   naive_lme         =f,
-                   wtd_lme           =g,
-                   perc_ltfu_18      =percent.missing.at.age.18,
-                   sim_seed = sim_seed, 
-                   sample_size = sample_size,
-                   sim_slope = sim_slope,
-                   sim_intercept = sim_intercept, 
-                   sim_ses_coef = sim_ses_coef,
-                   sim_age_coef = sim_age_coef,
-                   percent_missing = percent.missing,
-                   percent_missing_below_median = percent.missing.below.median,
-                   percent_missing_above_median = percent.missing.above.median)
-
+# a=(one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_non_parm_avg"])^2
+# b=(one_row_per_age[,"true_avg"]-one_row_per_age[,"wtd_non_parm_avg"])^2
+# c=(one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_fpc"])^2
+# d=(one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_fpc_pabw"])^2
+# e=(one_row_per_age[,"true_avg"]-one_row_per_age[,"weighted_fpc"])^2
+# f=(one_row_per_age[,"true_avg"]-one_row_per_age[,"naive_lme"])^2
+# g=(one_row_per_age[,"true_avg"]-one_row_per_age[,"wtd_lme"])^2
+# results=data.frame(age               = one_row_per_age[,"age"],
+#                    naive_non_parm_avg=a,
+#                    wtd_non_parm_avg  =b,
+#                    naive_fpc         =c,
+#                    naive_fpc_pabw    =d,
+#                    weighted_fpc      =e,
+#                    naive_lme         =f,
+#                    wtd_lme           =g,
+#                    perc_ltfu_18      =percent.missing.at.age.18,
+#                    sim_seed = sim_seed, 
+#                    sample_size = sample_size,
+#                    sim_slope = sim_slope,
+#                    sim_intercept = sim_intercept, 
+#                    sim_ses_coef = sim_ses_coef,
+#                    sim_age_coef = sim_age_coef,
+#                    percent_missing = percent.missing,
+#                    percent_missing_below_median = percent.missing.below.median,
+#                    percent_missing_above_median = percent.missing.above.median)
+# 
 
 ## throw in missing at each age:
 ##results <- as.data.frame(t(unlist(c(results, as.data.frame(t(percent.missing))))))
@@ -287,13 +304,13 @@ results=data.frame(age               = one_row_per_age[,"age"],
 
 
 ##  currently not using; going to put some of these in RDS itself
-label=paste("sim_seed", sim_seed, 
-      "sample_size", sample_size,
-      "sim_slope", sim_slope,
-      "sim_intercept", sim_intercept, 
-      "sim_ses_coef", sim_ses_coef,
-      "sim_age_coef", sim_age_coef,
-      sep="_")
+# label=paste("sim_seed", sim_seed, 
+#       "sample_size", sample_size,
+#       "sim_slope", sim_slope,
+#       "sim_intercept", sim_intercept, 
+#       "sim_ses_coef", sim_ses_coef,
+#       "sim_age_coef", sim_age_coef,
+#       sep="_")
 
 ##saveRDS(results,paste0("results_",label,".RDS" ))
 saveRDS(results,paste0("results_",abs(round(10000000*rnorm(1))), sample(letters)[1],abs(round(10000000*rnorm(1))), ".RDS" ))
