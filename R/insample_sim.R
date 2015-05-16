@@ -21,7 +21,7 @@ insample_sim <- function(sim_seed=101, sample_size=1000, sim_slope=100,
   #simulate_censor_summarize()
 
   ## just for testing; comment out before github commits
-  sim_seed=101; sample_size=1000; sim_slope=100; sim_intercept=12; sim_ses_coef=.01; sim_age_coef=.01;
+  ##sim_seed=101; sample_size=1000; sim_slope=100; sim_intercept=12; sim_ses_coef=.01; sim_age_coef=.01;
   
   
   ## d will be a 39 x 32 matrix based on the males from the Berkeley Growth Study in `fda` package
