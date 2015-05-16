@@ -17,7 +17,8 @@
 sample_data_fpc <- function(data_in=NULL, tot_subj=1000, seed=101, timepoints=age_vec, knots.face=NULL){
   ## a hack -- I didn't specify knots as an argument before I did prediction stuff.
   ## so I know have it has an arg set to NULL, and the first line is a switch.
-  knots.face <- ifelse(is.null(knots.face), (length(timepoints)-2), knots.face)
+  ## note:  when starting insample_sim.R work on May 16, 2015, needed to make it -5 (was -2)
+  knots.face <- ifelse(is.null(knots.face), (length(timepoints)-5), knots.face)
   ff<-fpca.face(Y=data_in[,-1], argvals=timepoints, knots=knots.face) 
   ## empirical covariance matrix
   covmat = cov(ff$scores)
