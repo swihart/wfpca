@@ -11,6 +11,7 @@ Depends:
     ggplot2,
     reshape2,
     nlme,
-    devtools
+    lme4,
+    data.table
 License: GPL2
 LazyData: true

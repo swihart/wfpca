@@ -15,14 +15,14 @@
 #' ---
 readme_sim <- function(sim_seed=101, sample_size=1000, sim_slope=100, sim_intercept=12, 
                        sim_ses_coef=.01, sim_age_coef=.01){
-library(fda)
-library(ggplot2)
-library(reshape2)
-library(refund)
-library(nlme)
-library(devtools)
+#library(fda)
+#library(ggplot2)
+#library(reshape2)
+#library(refund)
+#library(nlme)
+#library(devtools)
 #install_github("swihart/wfpca")
-library(wfpca)
+#library(wfpca)
 d<-prep_data()
 #head(d)
 over_samp_mat<-sample_data_fpc(d, sample_size, seed=sim_seed, timepoints=as.numeric(names(d[,-1])))

@@ -44,8 +44,8 @@ calculate_stipw <- function(data_in=NULL, na.action="omit"){
   data_in$cumsum.ind <- ave(data_in$indcen.age,data_in$newid,FUN=cumsum)
   data_in$cumsum.ind2 <- ave(data_in$cumsum.ind,data_in$newid,FUN=cumsum)
   
-  
   data_in.sub <- data_in[data_in$cumsum.ind2<=1,]
+  
   
   bl.logit.nocov <- glm(instudy~bs(age,intercept=TRUE,df=7)-1    , family="binomial", data=data_in.sub)
   bl.logit.ses   <- glm(instudy~bs(age,intercept=TRUE,df=7)-1+ses, family="binomial", data=data_in.sub)
@@ -59,11 +59,20 @@ calculate_stipw <- function(data_in=NULL, na.action="omit"){
   data_in.sub$bl.fitted.nocov <- (bl.logit.nocov$fitted)
   data_in.sub$bl.fitted.ses   <- (bl.logit.ses$fitted)
   
-  data_in.sub$cumprod.nocov <- ave(data_in.sub$bl.fitted.nocov,data_in.sub$newid,FUN=cumprod)
-  data_in.sub$cumprod.ses <- ave(data_in.sub$bl.fitted.ses,data_in.sub$newid,FUN=cumprod)
-  data_in.sub$stipw <- data_in.sub$cumprod.nocov/data_in.sub$cumprod.ses
   
-  data_in.sub$stipw[!data_in.sub$instudy] <- 0
+  ## now sub again so that we only have observed for weight calculation...
+  data_in.sub2 <- data_in.sub[data_in.sub$cumsum.ind2==0,]
+  
+  data_in.sub2$cumprod.nocov <- ave(data_in.sub2$bl.fitted.nocov,data_in.sub2$newid,FUN=cumprod)
+  data_in.sub2$cumprod.ses <- ave(data_in.sub2$bl.fitted.ses,data_in.sub2$newid,FUN=cumprod)
+  data_in.sub2$stipw <- data_in.sub2$cumprod.nocov/data_in.sub2$cumprod.ses
+  
+  ## instead of setting this to 0, once weights are calculated for everyone else,
+  ## remove the censored line for each individual...
+  ## data_in.sub$stipw[!data_in.sub$instudy] <- 0
+  
+  
+  
   
   #qplot(cumprod.nocov,cumprod.ses,color=age,size=ses,data=data_in.sub)
   #qplot(stipw,cumprod.ses,color=age,size=ses,data=data_in.sub)
@@ -74,10 +83,10 @@ calculate_stipw <- function(data_in=NULL, na.action="omit"){
   
   
  if(na.action=="omit"){
-   return_obj=data_in.sub
+   return_obj=data_in.sub2
  }
  if(na.action=="keep"){
-   back_in <- merge(data_in, data_in.sub,all.x=TRUE,sort=FALSE)
+   back_in <- merge(data_in, data_in.sub2,all.x=TRUE,sort=FALSE)
    return_obj=back_in
  } 
   
