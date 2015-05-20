@@ -7,7 +7,7 @@
 #' @param seed an integer for set.seed(seed) to assist reproducible simulations
 #' @param timepoints the grid that the columns of data_in represent
 #' @param knots.face number of knots passed to fpca.face() -- defaults to NULL in which case fpca.face
-#' is told to have (length(timepoints)-2) knots.
+#' is told to have (length(timepoints)-5) knots.
 #' @keywords oversampling
 #' @export
 #' @examples
@@ -26,7 +26,7 @@ sample_data_fpc <- function(data_in=NULL, tot_subj=1000, seed=101, timepoints=ag
   diag(covmat) <- ff$eigenvalues
   ## independent:
   ##covmat <- diag(ff$eigenvalues)
-  library(mvtnorm)
+  ##library(mvtnorm)
   sim_scores<-rmvnorm(tot_subj,
                       rep(0,length(ff$eigenvalues)),
                       covmat) 

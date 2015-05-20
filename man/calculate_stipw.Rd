@@ -20,6 +20,7 @@ Names are hard coded, so stick
 to script in the examples.
 }
 \examples{
+\dontrun{
 d<-prep_data()
 head(d)
 over_samp_mat<-sample_data(d,1000)
@@ -29,5 +30,6 @@ head(long)
 censored <- apply_censoring(long)
 head(censored,18)
 observed_with_stipw <- calculate_stipw(censored,"keep")
+}
 }
 

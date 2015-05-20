@@ -18,7 +18,7 @@ sample_data_fpc(data_in = NULL, tot_subj = 1000, seed = 101,
 \item{timepoints}{the grid that the columns of data_in represent}
 
 \item{knots.face}{number of knots passed to fpca.face() -- defaults to NULL in which case fpca.face
-is told to have (length(timepoints)-2) knots.}
+is told to have (length(timepoints)-5) knots.}
 }
 \description{
 This returns an oversampling of "boys", the returned object from "prep_data()".

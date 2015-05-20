@@ -8,6 +8,7 @@
 #' @return a dataset similar to data_in with stipw in columns; and potentially fewer rows or NA-filled rows
 #' for induced censoring.  
 #' @examples
+#' \dontrun{
 #' d<-prep_data()
 #' head(d)
 #' over_samp_mat<-sample_data(d,1000)
@@ -17,6 +18,7 @@
 #' censored <- apply_censoring(long)
 #' head(censored,18)
 #' observed_with_stipw <- calculate_stipw(censored,"keep")
+#' }
 calculate_stipw <- function(data_in=NULL, na.action="omit"){
 
   ######################################################

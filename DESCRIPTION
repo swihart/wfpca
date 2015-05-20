@@ -12,6 +12,7 @@ Depends:
     reshape2,
     nlme,
     lme4,
-    data.table
+    data.table,
+    mvtnorm
 License: GPL2
 LazyData: true
