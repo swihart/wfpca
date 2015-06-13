@@ -41,7 +41,7 @@ insample_sim <- function(sim_seed=101, sample_size=1000, sim_slope=100,
   censored$inches <- censored$inches + runif(length(censored$inches), -1/8,1/8)
   
   ## observed_with_stipw has the standardized inverse probability weights (stipw)
-  ## wtd_trajectories has same info as observed_with_stipw but has inches_wtd as well
+  ## wtd_trajectories has same info as observed_with_stipw but has inches_wtd_hadamard as well
   ## we calculate all_with_stipw with NAs
        all_with_stipw <- calculate_stipw(censored,"keep")
   observed_with_stipw <- calculate_stipw(censored,"omit")
@@ -63,7 +63,7 @@ setkey(wtd_trajectories, newid, age, inches, ses)
 interim <- wtd_trajectories[all_with_stipw]
 all_with_stipw<-subset(interim,
                        select=c(names(all_with_stipw),
-                                "inches_wtd",
+                                "inches_wtd_hadamard",
                                 "remaining",
                                 "stipw",
                                 "stipw01",
@@ -74,10 +74,18 @@ all_with_stipw<-subset(interim,
 all_with_stipw[            , inches_ltfu:=inches ]
 all_with_stipw[is.na(stipw), inches_ltfu:=NA ]
 
+## calculate "remean" data prep:
+all_with_stipw[,
+               inches_wtd_remean:= inches_ltfu - 
+                                   mean(inches_ltfu, na.rm=T) + 
+                                   mean(inches_wtd_hadamard , na.rm=T),
+               by=age]
+
+
 ## standardize the names selected across all approaches and their resultant  data sets
 selected<-c("newid","age", "ses", 
             
-            "inches", "inches_wtd", "inches_ltfu", "inches_predicted",
+            "inches", "inches_wtd_hadamard","inches_wtd_remean", "inches_ltfu", "inches_predicted",
             
             "remaining",
             "stipw",
@@ -153,39 +161,35 @@ naive_fpc <- subset(naive_fpc, select=selected)
 #   geom_point(aes(y=inches), color='black')
 
 
-
-
-
-
-## note: we're simplifying to (w)fpca and (w)lme
-##d) naive-FPC-post-adjusted-by-weights, and
-# pabw <- dcast(data=wtd_trajectories, formula= newid~age, value.var="stipw01.n")
-# pabw[pabw==0]<-NA
-# pabw_fpca_unwtd_fncs <- fpca_unwtd_fncs$Yhat*pabw[,-1] ## element-wise
-# naive_fpc_pabw_avg <- colMeans(pabw_fpca_unwtd_fncs,na.rm=TRUE)
-# naive_fpc_pabw <- data.frame(age=age_vec, V1=naive_fpc_pabw_avg, approach="naive_fpc_pabw")
-# ## combine with long for the prediction:
-# ## a little different than previous examples; now we do have individual level curves
-# ## need to extract them (Yhat) and rename them and data.table them
-# naive_fpc_pabw_indiv <- as.data.frame(cbind(1:nrow(pabw_fpca_unwtd_fncs),pabw_fpca_unwtd_fncs))
-# colnames(naive_fpc_pabw_indiv) <- colnames(unwtd_fncs)
-# setDT(naive_fpc_pabw_indiv)
-# naive_fpc_pabw <- melt(naive_fpc_pabw_indiv,      
-#                   id.vars=c("newid"),  
-#                   variable.name = "age", 
-#                   variable.factor=FALSE,
-#                   value.name="inches_predicted")
-# naive_fpc_pabw[,approach:="naive_fpc_pabw",]
-# naive_fpc_pabw[,age:=as.numeric(age)]
-# setDT(naive_fpc_pabw)
-# setkey(naive_fpc_pabw, newid, age, inches_predicted)
-# naive_fpc_pabw <- naive_fpc_pabw[all_with_stipw]
-# setkey(naive_fpc_pabw, newid, age, inches_predicted)
-# naive_fpc_pabw <- subset(naive_fpc_pabw, select=c("newid","age", "inches", "inches_ltfu", "inches_predicted", "approach"))
+##e) remean - weighted-FPC.
+wtd_remean_fncs <- dcast(data=subset(all_with_stipw, 
+                                     select=c("newid","age","inches_wtd_remean")),
+                         formula= newid~age, value.var="inches_wtd_remean")
+fpca_wtd_remean_fncs <- fpca.face(Y=as.matrix(wtd_remean_fncs)[,-1], argvals=age_vec, knots=26)
+#weighted_fpc <- data.frame(age=age_vec, V1=fpca_wtd_fncs$mu, approach="weighted_fpc")
+## combine with long for the prediction:
+## a little different than previous examples; now we do have individual level curves
+## need to extract them (Yhat) and rename them and data.table them
+weighted_remean_fpc_indiv <- as.data.frame(cbind(1:nrow(fpca_wtd_remean_fncs$Yhat),
+                                                 fpca_wtd_remean_fncs$Yhat))
+colnames(weighted_remean_fpc_indiv) <- colnames(wtd_remean_fncs)
+setDT(weighted_remean_fpc_indiv)
+weighted_remean_fpc <- melt(weighted_remean_fpc_indiv,      
+                     id.vars=c("newid"),  
+                     variable.name = "age", 
+                     variable.factor=FALSE,
+                     value.name="inches_predicted")
+weighted_remean_fpc[,approach:="wtd_remean_fpc",]
+weighted_remean_fpc[,age:=as.numeric(age)]
+setDT(weighted_remean_fpc)
+setkey(weighted_remean_fpc, newid, age)
+weighted_remean_fpc <- weighted_remean_fpc[all_with_stipw]
+setkey(weighted_remean_fpc, newid, age)
+weighted_remean_fpc <- subset(weighted_remean_fpc, select=selected)
 
 
 ##e) weighted-FPC.
-wtd_fncs <- dcast(data=wtd_trajectories, formula= newid~age, value.var="inches_wtd")
+wtd_fncs <- dcast(data=wtd_trajectories, formula= newid~age, value.var="inches_wtd_hadamard")
 fpca_wtd_fncs <- fpca.face(Y=as.matrix(wtd_fncs)[,-1], argvals=age_vec, knots=26)
 #weighted_fpc <- data.frame(age=age_vec, V1=fpca_wtd_fncs$mu, approach="weighted_fpc")
 ## combine with long for the prediction:
@@ -195,11 +199,11 @@ weighted_fpc_indiv <- as.data.frame(cbind(1:nrow(fpca_wtd_fncs$Yhat),fpca_wtd_fn
 colnames(weighted_fpc_indiv) <- colnames(wtd_fncs)
 setDT(weighted_fpc_indiv)
 weighted_fpc <- melt(weighted_fpc_indiv,      
-                  id.vars=c("newid"),  
-                  variable.name = "age", 
-                  variable.factor=FALSE,
-                  value.name="inches_predicted")
-weighted_fpc[,approach:="weighted_fpc",]
+                     id.vars=c("newid"),  
+                     variable.name = "age", 
+                     variable.factor=FALSE,
+                     value.name="inches_predicted")
+weighted_fpc[,approach:="wtd_hadamard_fpc",]
 weighted_fpc[,age:=as.numeric(age)]
 setDT(weighted_fpc)
 setkey(weighted_fpc, newid, age)
@@ -222,10 +226,10 @@ weighted_fpc.test[stipw01.n==0, stipw01.n:=NA]
 weighted_fpc.test[, inches_predicted_weighted:= inches_predicted]
 weighted_fpc.test[!is.na(stipw01.n), inches_predicted_deweighted:= inches_predicted/stipw01.n]
 ## get the wtd_population_mean in there:
-weighted_fpc.test[,wtd_pop_mean:=fpca_wtd_fncs$mu,by=newid]
+## skip this time:  ##weighted_fpc.test[,wtd_pop_mean:=fpca_wtd_fncs$mu,by=newid]
 ##for now, if don't have observed data there, we just imputed the weighted mean
 ## kinda lame, think on it.
-weighted_fpc.test[is.na(stipw01.n), inches_predicted_deweighted:= wtd_pop_mean, by=newid]
+## skip this time:  ##weighted_fpc.test[is.na(stipw01.n), inches_predicted_deweighted:= wtd_pop_mean, by=newid]
 ## end extra steps:
 setkey(weighted_fpc.test, newid, age)#, inches_predicted_deweighted)
 setnames(weighted_fpc.test, "inches_predicted", "inches_predicted_old")
@@ -252,7 +256,8 @@ naive_lme<-tryCatch(
                           age              = all_with_stipw$age,
                           ses              = all_with_stipw$ses,
                           inches           = all_with_stipw$inches,
-                          inches_wtd       = all_with_stipw$inches_wtd,
+                          inches_wtd_hadamard       = all_with_stipw$inches_wtd_hadamard,
+                          inches_wtd_remean         = all_with_stipw$inches_wtd_remean,
                           inches_ltfu      = all_with_stipw$inches_ltfu,
                           inches_predicted = predict(naive_lme_model, 
                                                      newdata=all_with_stipw),
@@ -270,7 +275,8 @@ warning =function(cond){
                           age              = all_with_stipw$age,
                           ses              = all_with_stipw$ses,
                           inches           = all_with_stipw$inches,
-                          inches_wtd       = all_with_stipw$inches_wtd,
+                          inches_wtd_hadamard       = all_with_stipw$inches_wtd_hadamard,
+                          inches_wtd_remean         = all_with_stipw$inches_wtd_remean,
                           inches_ltfu      = all_with_stipw$inches_ltfu,
                           inches_predicted = NA,
                           remaining        = all_with_stipw$remaining,
@@ -287,7 +293,8 @@ error =function(cond){
                           age              = all_with_stipw$age,
                           ses              = all_with_stipw$ses,
                           inches           = all_with_stipw$inches,
-                          inches_wtd       = all_with_stipw$inches_wtd,
+                          inches_wtd_hadamard       = all_with_stipw$inches_wtd_hadamard,
+                          inches_wtd_remean         = all_with_stipw$inches_wtd_remean,
                           inches_ltfu      = all_with_stipw$inches_ltfu,
                           inches_predicted = NA,
                           remaining        = all_with_stipw$remaining,
@@ -296,6 +303,79 @@ error =function(cond){
                           stipw01.n        = all_with_stipw$stipw01.n,
                           approach="naive_lme")
 })
+setkey(naive_lme, newid, age)
+## quick checks:
+# summary(naive_lme)
+# ggplot(data=naive_lme[newid %in% c(2)], 
+#       aes(x=age, y=inches_predicted, color=factor(newid)))+
+#   geom_point()+
+#   geom_point(aes(y=inches), color='black')
+
+##f) weighted_remean_lme
+wtd_remean_lme<-tryCatch(
+{
+  #naive_lme_model<-lme(inches ~ bs(age, df=15), random=~1|newid, data=observed_with_stipw);
+  #naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0), approach="naive_lme")
+  
+  
+  wtd_remean_lme_model<-lmer(inches_wtd_remean ~ bs(age, df=15) + (1|newid), data=all_with_stipw,
+                             na.action=na.omit);
+  ## re.form=~0
+  #naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), re.form=~0), approach="naive_lme")
+  ## re.form=~1
+  wtd_remean_lme <- 
+               data.table(newid            = all_with_stipw$newid,
+                          age              = all_with_stipw$age,
+                          ses              = all_with_stipw$ses,
+                          inches           = all_with_stipw$inches,
+                          inches_wtd_hadamard = all_with_stipw$inches_wtd_hadamard,
+                          inches_wtd_remean         = all_with_stipw$inches_wtd_remean,
+                          inches_ltfu      = all_with_stipw$inches_ltfu,
+                          inches_predicted = predict(wtd_remean_lme_model, 
+                                                     newdata=all_with_stipw),
+                          remaining        = all_with_stipw$remaining,
+                          stipw            = all_with_stipw$stipw,
+                          stipw01          = all_with_stipw$stipw01,
+                          stipw01.n        = all_with_stipw$stipw01.n,
+                          approach="wtd_remean_lme")
+},
+warning =function(cond){
+  write.csv(observed_with_stipw, paste0("data_that_failed_nlme_lme_fit_",abs(rnorm(1,100,100)),".csv"), row.names=FALSE)
+  ## re.form=~0
+  ##naive_lme <- data.frame(age=age_vec, V1=NA, approach="naive_lme")  ;
+  wtd_remean_lme <- data.table(newid            = all_with_stipw$newid,
+                          age              = all_with_stipw$age,
+                          ses              = all_with_stipw$ses,
+                          inches           = all_with_stipw$inches,
+                          inches_wtd_hadamard       = all_with_stipw$inches_wtd_hadamard,
+                          inches_wtd_remean         = all_with_stipw$inches_wtd_remean,
+                          inches_ltfu      = all_with_stipw$inches_ltfu,
+                          inches_predicted = NA,
+                          remaining        = all_with_stipw$remaining,
+                          stipw            = all_with_stipw$stipw,
+                          stipw01          = all_with_stipw$stipw01,
+                          stipw01.n        = all_with_stipw$stipw01.n,
+                          approach="wtd_remean_lme")
+},
+error =function(cond){
+  write.csv(observed_with_stipw, paste0("data_that_failed_nlme_lme_fit_",abs(rnorm(1,100,100)),".csv"), row.names=FALSE)
+  ## re.form=~0
+  #naive_lme <- data.frame(age=age_vec, V1=NA, approach="naive_lme")  ;
+  wtd_remean_lme <- data.table(newid            = all_with_stipw$newid,
+                          age              = all_with_stipw$age,
+                          ses              = all_with_stipw$ses,
+                          inches           = all_with_stipw$inches,
+                          inches_wtd_hadamard       = all_with_stipw$inches_wtd_hadamard,
+                          inches_wtd_remean         = all_with_stipw$inches_wtd_remean,
+                          inches_ltfu      = all_with_stipw$inches_ltfu,
+                          inches_predicted = NA,
+                          remaining        = all_with_stipw$remaining,
+                          stipw            = all_with_stipw$stipw,
+                          stipw01          = all_with_stipw$stipw01,
+                          stipw01.n        = all_with_stipw$stipw01.n,
+                          approach="wtd_remean_lme")
+})
+setkey(wtd_remean_lme, newid, age)
 ## quick checks:
 # summary(naive_lme)
 # ggplot(data=naive_lme[newid %in% c(2)], 
@@ -310,7 +390,7 @@ error =function(cond){
 ## whereas the other one below it are lme4::lmer of inches.
 # wtd_lme<-tryCatch(
 # {
-#   wtd_lme_model<-lme(inches_wtd ~ bs(age, df=15), random=~1|newid, data=wtd_trajectories,
+#   wtd_lme_model<-lme(inches_wtd_hadamard ~ bs(age, df=15), random=~1|newid, data=wtd_trajectories,
 #                      na.action=na.omit);
 #   ##predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0)
 #   wtd_lme <- data.frame(age=age_vec, V1=predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0), approach="wtd_lme")
@@ -328,9 +408,9 @@ error =function(cond){
 
 wtd_lme<-tryCatch(
 {
-  #   wtd_lme_model<-lme(inches_wtd ~ bs(age, df=15), random=~1|newid, data=wtd_trajectories,
+  #   wtd_lme_model<-lme(inches_wtd_hadamard ~ bs(age, df=15), random=~1|newid, data=wtd_trajectories,
   #                      na.action=na.omit);
-  wtd_lme_model<-lmer(inches_wtd ~ bs(age, df=15) + (1|newid), data=wtd_trajectories,
+  wtd_lme_model<-lmer(inches_wtd_hadamard ~ bs(age, df=15) + (1|newid), data=wtd_trajectories,
                       na.action=na.omit);
   ##predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0)
   ##wtd_lme <- data.frame(age=age_vec, V1=predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0), approach="wtd_lme")
@@ -344,7 +424,8 @@ wtd_lme<-tryCatch(
                           age              = all_with_stipw$age,
                           ses              = all_with_stipw$ses,
                           inches           = all_with_stipw$inches,
-                          inches_wtd       = all_with_stipw$inches_wtd,
+                          inches_wtd_hadamard       = all_with_stipw$inches_wtd_hadamard,
+                          inches_wtd_remean       = all_with_stipw$inches_wtd_remean,
                           inches_ltfu      = all_with_stipw$inches_ltfu,
                           inches_predicted = predict(wtd_lme_model, 
                                                      newdata=all_with_stipw),
@@ -352,7 +433,7 @@ wtd_lme<-tryCatch(
                           stipw            = all_with_stipw$stipw,
                           stipw01          = all_with_stipw$stipw01,
                           stipw01.n        = all_with_stipw$stipw01.n,
-                          approach="wtd_lme")
+                          approach="wtd_hadamard_lme")
   
   wtd_lme.test<- wts[wtd_lme1]
   ## see how many 0's
@@ -362,10 +443,10 @@ wtd_lme<-tryCatch(
   wtd_lme.test[, inches_predicted_weighted:= inches_predicted]
   wtd_lme.test[!is.na(stipw01.n), inches_predicted_deweighted:= inches_predicted/stipw01.n]
   ## get the wtd_population_mean in there:
-  wtd_lme.test[,wtd_pop_mean:=wtd_lme_pop_mean$V1,by=newid]
+  ## skip this time ## wtd_lme.test[,wtd_pop_mean:=wtd_lme_pop_mean$V1,by=newid]
   ##for now, if don't have observed data there, we just imputed the weighted mean
   ## kinda lame, think on it.
-  wtd_lme.test[is.na(stipw01.n), inches_predicted_deweighted:= wtd_pop_mean, by=newid]
+  ## skip this time ## wtd_lme.test[is.na(stipw01.n), inches_predicted_deweighted:= wtd_pop_mean, by=newid]
   ## end extra steps:
   setkey(wtd_lme.test, newid, age)#, inches_predicted_deweighted)
   setnames(wtd_lme.test, "inches_predicted", "inches_predicted_old")
@@ -380,14 +461,15 @@ warning =function(cond){
                           age              = all_with_stipw$age,
                           ses              = all_with_stipw$ses,
                           inches           = all_with_stipw$inches,
-                          inches_wtd       = all_with_stipw$inches_wtd,
+                          inches_wtd_hadamard       = all_with_stipw$inches_wtd_hadamard,
+                          inches_wtd_remean       = all_with_stipw$inches_wtd_remean,
                           inches_ltfu      = all_with_stipw$inches_ltfu,
                           inches_predicted = NA,
                           remaining        = all_with_stipw$remaining,
                           stipw            = all_with_stipw$stipw,
                           stipw01          = all_with_stipw$stipw01,
                           stipw01.n        = all_with_stipw$stipw01.n,
-                          approach="wtd_lme")
+                          approach="wtd_hadamard_lme")
 },
 error =function(cond){
   write.csv(wtd_trajectories, paste0("data_that_failed_lme4_lmer_fit_",abs(rnorm(1,100,100)),".csv"), row.names=FALSE)
@@ -396,15 +478,17 @@ error =function(cond){
                           age              = all_with_stipw$age,
                           ses              = all_with_stipw$ses,
                           inches           = all_with_stipw$inches,
-                          inches_wtd       = all_with_stipw$inches_wtd,
+                          inches_wtd_hadamard       = all_with_stipw$inches_wtd_hadamard,
+                          inches_wtd_remean       = all_with_stipw$inches_wtd_remean,
                           inches_ltfu      = all_with_stipw$inches_ltfu,
                           inches_predicted = NA,
                           remaining        = all_with_stipw$remaining,
                           stipw            = all_with_stipw$stipw,
                           stipw01          = all_with_stipw$stipw01,
                           stipw01.n        = all_with_stipw$stipw01.n,
-                          approach="wtd_lme")
+                          approach="wtd_hadamard_lme")
 })
+setkey(wtd_lme, newid, age)
 ## quick checks:
 # summary(wtd_lme)
 # ggplot(data=wtd_lme[newid %in% c(1,2,5)], 
@@ -429,7 +513,43 @@ error =function(cond){
 ## means <- rbind(true_avg, naive_non_parm_avg, wtd_non_parm_avg, naive_fpc, naive_fpc_pabw, weighted_fpc, naive_lme, wtd_lme)
 # note: we're simplifying to (w)fpca and (w)lme, so we rbind() fewer than line above (if you decided to add more approaches later,
 #         make sure they have same format):
-means <- rbind(naive_fpc, weighted_fpc, naive_lme, wtd_lme)
+means <- rbind(naive_fpc, weighted_fpc, weighted_remean_fpc, naive_lme, wtd_lme, wtd_remean_lme)
+means[,     newid := as.integer(newid)]
+means[, remaining := as.integer(remaining)]
+setkey(means, "newid","age")
+
+
+
+didya<-dcast(means, newid+age ~ approach, value.var="inches_predicted")
+## after rbind multiple instances, use this to melt it
+##melt.didya <- melt(didya, id.vars=c("newid","age"), variable="approach", value="inches_predicted")
+
+
+# ## make additions columnwise, not rbind-wise.  Save those GBs.  Can melt once in memory.
+# key(naive_fpc)
+# key(weighted_fpc)
+# key(weighted_remean_fpc)
+# key(naive_lme)
+# key(wtd_lme)
+# key(wtd_remean_lme)
+# 
+base.select <- 
+            c("newid","age", "ses", 
+              "inches", "inches_wtd_hadamard","inches_wtd_remean", "inches_ltfu", 
+#               "inches_predicted",
+               "remaining",
+               "stipw",
+               "stipw01",
+               "stipw01.n"#,
+#               "approach"
+              )
+
+base <- subset(naive_fpc, select=base.select)
+
+base_means <- base[didya]
+
+
+
 
 # from older files:
 # means$approach<-factor(means$approach, levels=unique(means$approach))
@@ -468,18 +588,19 @@ percent.missing.above.median=colSums(is.na(subbie))/nrow(subbie)
 ##       and the only non-scalars are vectors that are same length as number of age-levels
 ## return:
 results <- cbind(
-        sim_seed = sim_seed,
-        sample_size = sample_size,
-        sim_slope = sim_slope,
-        sim_intercept = sim_intercept,
-        sim_ses_coef = sim_ses_coef,
-        sim_age_coef = sim_age_coef,
-        perc_ltfu_18      =percent.missing.at.age.18,
-        percent_missing = percent.missing,
+        sim_seed                     = as.integer(sim_seed),
+        sample_size                  = as.integer(sample_size),
+        sim_slope                    = as.integer(sim_slope),
+        sim_intercept                = as.integer(sim_intercept),
+        sim_ses_coef                 = sim_ses_coef,
+        sim_age_coef                 = sim_age_coef,
+        perc_ltfu_18                 = percent.missing.at.age.18,
+        percent_missing              = percent.missing,
         percent_missing_below_median = percent.missing.below.median,
         percent_missing_above_median = percent.missing.above.median,
-        means)
-
+        #means,
+        base_means)
+## note:  choose means OR base_means.  means is from rbind() above and multiplies rows by 6.
 
 
 
@@ -509,7 +630,7 @@ results <- cbind(
 # oos.late <- oos[,c(TRUE, !oos_ind)]
 # 
 # ##e) weighted-FPC.
-# ##wtd_fncs <- dcast(data=wtd_trajectories, formula= newid~age, value.var="inches_wtd")
+# ##wtd_fncs <- dcast(data=wtd_trajectories, formula= newid~age, value.var="inches_wtd_hadamard")
 # fpca_wtd_fncs_pred_oos <- fpca.face(Y=as.matrix(wtd_fncs[,-1]), Y.pred=as.matrix(oos.early[,-1]), argvals=age_vec, knots=10)
 # 
 # weighted_fpc_pred_oos <- data.frame(age=age_vec, V1=fpca_wtd_fncs_pred_oos$mu, approach="weighted_fpc_pred_oos")

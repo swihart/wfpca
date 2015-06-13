@@ -42,8 +42,8 @@ long01.int <- join(data_in,denom, by="age")
 long01 <- join(long01.int, remaining, by="age")
 long01$stipw01 <- long01$stipw/long01$denom
 long01$stipw01.n <- long01$remaining*long01$stipw01
-long01$inches_wtd <- long01$inches*long01$stipw01.n
-long01$inches_wtd[long01$inches_wtd==0] <- NA  ## uncomment; 
+long01$inches_wtd_hadamard <- long01$inches*long01$stipw01.n
+long01$inches_wtd_hadamard[long01$inches_wtd_hadamard==0] <- NA  ## uncomment; 
 ## calculate as you did above for wtd_avg; avg, avg_bias
 ##avg_biased01 <- ddply(subset(long01,instudy==1), .(age), function(w)  mean(w$inches_wtd))
 ##names(avg_biased01)[2] <- "ab01"
