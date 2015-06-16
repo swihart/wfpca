@@ -4,7 +4,8 @@
 \alias{apply_censoring}
 \title{Apply censoring scheme that is related to SES}
 \usage{
-apply_censoring(data_in = NULL, ses_coef = 0.1, age_coef = 0.2)
+apply_censoring(data_in = NULL, ses_coef = 0.1, age_coef = 0.2,
+  protected = c(1, 1.25, 1.5, 1.75, 2, 3))
 }
 \arguments{
 \item{data_in}{an object returned from calculate_ses()}
@@ -12,6 +13,8 @@ apply_censoring(data_in = NULL, ses_coef = 0.1, age_coef = 0.2)
 \item{ses_coef}{a number near .1 that controls how much 1-(ses_i -min(ses))/(max(ses)-min(ses)) contributes to the probability of censoring}
 
 \item{age_coef}{a number near .2 that controls how much (age - min(age))/(max(age)-min(age)) contributes to the probability of censoring}
+
+\item{protected}{a vector corresponding to age / colnames of age_vec that are protected from censoring so that fpca.face() wont bonk}
 }
 \value{
 prob.cens as a column added to data_in representing the probability of being censored at that time.

@@ -22,8 +22,9 @@ calculate_ses <- function(data_in=NULL, slope=100, intercept=12){
   ## induce linear relationship between SES and Height,
   ## that ranges between 12 and 112.  We can suppose that this SES is household income
   ## in 1000 USD or something like that.  Then add to overSampMat (now it is 33rd column)
-  SES <- slope*(data_in[,32]-min(data_in[,32]))/
-               (max(data_in[,32])-min(data_in[,32])) + intercept +
+  nc <- ncol(data_in)
+  SES <- slope*(data_in[,nc]-min(data_in[,nc]))/
+               (max(data_in[,nc])-min(data_in[,nc])) + intercept +
                rnorm(dim(data_in)[1])
   data_in$ses <- SES
   data_in
