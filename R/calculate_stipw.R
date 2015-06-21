@@ -48,7 +48,10 @@ calculate_stipw <- function(data_in=NULL, na.action="omit"){
   
   data_in.sub <- data_in[data_in$cumsum.ind2<=1,]
   
-  
+  ## we calculate the numerator and denominators for the standardize inverse probability wts 
+  ## aka STIPW on data_in.sub.  However, if the models only contain baseline info
+  ## and not subject-specific time-varying info, we can actually FIT/PREDICT weights
+  ## for every single observation, regardless of missing outcomes (inches, cd4,etc)
   bl.logit.nocov <- glm(instudy~bs(age,intercept=TRUE,df=7)-1    , family="binomial", data=data_in.sub)
   bl.logit.ses   <- glm(instudy~bs(age,intercept=TRUE,df=7)-1+ses, family="binomial", data=data_in.sub)
   
@@ -58,9 +61,23 @@ calculate_stipw <- function(data_in=NULL, na.action="omit"){
   ## add the fitted probabilities to the dataframe
   #data_in$fitted.nocov <- (logit.nocov$fitted)
   #data_in$fitted.ses   <- (logit.ses$fitted)
+  
+  ## this is what we were doing; before Dean on 6/19 said
+  ## if only baseline we could fit wts for all:
   data_in.sub$bl.fitted.nocov <- (bl.logit.nocov$fitted)
   data_in.sub$bl.fitted.ses   <- (bl.logit.ses$fitted)
   
+  ## wts for all, not just .sub
+  data_in$bl.fitted.nocov2 <- predict(bl.logit.nocov,
+                                      newdata = data_in,
+                                      type="response")
+  data_in$bl.fitted.ses2   <- predict(bl.logit.ses,
+                                      newdata = data_in,
+                                      type="response")
+  
+  data_in$cumprod.nocov2 <- ave(data_in$bl.fitted.nocov2,data_in$newid,FUN=cumprod)
+  data_in$cumprod.ses2 <- ave(data_in$bl.fitted.ses2,data_in$newid,FUN=cumprod)
+  data_in$stipw2 <- data_in$cumprod.nocov2/data_in$cumprod.ses2
   
   ## now sub again so that we only have observed for weight calculation...
   data_in.sub2 <- data_in.sub[data_in.sub$cumsum.ind2==0,]

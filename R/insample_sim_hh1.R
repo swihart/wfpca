@@ -1,7 +1,7 @@
-#' Hopkins Hybrid 1: Run a simulation and then perform prediction.  Based on insample_sim().  Censoring is 
+#' Hopkins Hybrid 1: Run a simulation and then perform prediction.  Based on insample_sim().  Censoring is
 #' fabricated a la the SES of the Growth data.  We will make a _hh2 to do a more realistic censoring.
 #'
-#' This function comes after many months of running readme_sim and talks with Bryan Lau on 
+#' This function comes after many months of running readme_sim and talks with Bryan Lau on
 #' what we need to demonstrate for the method.
 #'
 #' @param sim_seed passed to set.seed()
@@ -20,41 +20,41 @@ insample_sim_hh1 <- function(sim_seed=101, sample_size=1000, sim_slope=100,
                             hh_rds='./data_local/hopkins_hybrid.RDS'){
   ## quick start with the default values as variables for testing.  Loads packages.
   #test_prep_script()
-  ## get the data prepped, that is simulated and censored and calculate missing. 
+  ## get the data prepped, that is simulated and censored and calculate missing.
   #simulate_censor_summarize()
 
   ## just for testing; comment out before github commits
   ##hh_rds='./data_local/hopkins_hybrid.RDS'; sim_seed=101; sample_size=1000; sim_slope=100; sim_intercept=12; sim_ses_coef=.01; sim_age_coef=.01;
   ##hh_rds='./data_local/hopkins_hybrid.RDS'; sim_seed=101; sample_size=5000; sim_slope=100; sim_intercept=12; sim_ses_coef=.01; sim_age_coef=.01;
   ##hh_rds='./data_local/hopkins_hybrid.RDS'; sim_seed=101; sample_size=5000; sim_slope=100; sim_intercept=12; sim_ses_coef=.005; sim_age_coef=.005;
-  
-  
+
+
   ## d will be a 39 x 32 matrix based on the males from the Berkeley Growth Study in `fda` package
   ## we oversample d based on the fpc as well extract out the ages of measurement
   d<-readRDS(hh_rds)
   age_vec <- c(as.numeric(colnames(d[,-1,with=FALSE])))
   over_samp_mat<-sample_data_fpc(as.matrix(d), sample_size, seed=sim_seed, timepoints=age_vec)
-  
+
   ## we calculate ses on the oversampled dataset and turn the matrix into a long dataset.
   with_ses <- calculate_ses(over_samp_mat, slope=sim_slope, intercept=sim_intercept)
   long <-make_long(with_ses)
 
   ## In this chunk we apply censoring.
   censored <- apply_censoring(long, ses_coef=sim_ses_coef, age_coef=sim_age_coef, protected=1:4)
-  
+
   ## Measurement error: within 1/8 inch.  Can comment out or change.
   censored$inches <- censored$inches + runif(length(censored$inches), -1/8,1/8)
-  
+
   ## observed_with_stipw has the standardized inverse probability weights (stipw)
   ## wtd_trajectories has same info as observed_with_stipw but has inches_wtd_hadamard as well
   ## we calculate all_with_stipw with NAs
        all_with_stipw <- calculate_stipw(censored,"keep")
   observed_with_stipw <- calculate_stipw(censored,"omit")
   wtd_trajectories    <- calculate_wtd_trajectories(observed_with_stipw)
-  
-  
-  
-  
+
+
+
+
   ## use data.table where possible speeds up future rbinds post simulation
 #setDT(long)
 #setkey(long, id, age)
@@ -66,7 +66,18 @@ setDT(wtd_trajectories)
 setkey(wtd_trajectories, newid, age, inches, ses)
 
 interim <- wtd_trajectories[all_with_stipw]
-all_with_stipw<-subset(interim,
+
+## BEGIN:  new step...DEAN:
+key.interim <- unique(interim[,c("age","remaining","denom"), with=FALSE])[!is.na(remaining) & !is.na(remaining)]
+setkey(key.interim, age)
+setkey(interim, age)
+holder<-key.interim[interim]
+holder[is.na(stipw01.n), stipw01.n := remaining*(stipw2/denom) ]
+## END:  new step...DEAN:
+
+
+## Dean step: change below to holder (formerly interim)
+all_with_stipw<-subset(holder,
                        select=c(names(all_with_stipw),
                                 "inches_wtd_hadamard",
                                 "remaining",
@@ -75,28 +86,33 @@ all_with_stipw<-subset(interim,
                                 "stipw01.n"))
 
 
+## DEAN step: reset keys;
+setkey(all_with_stipw, newid, age, inches, ses)
+setkey(wtd_trajectories, newid, age, inches, ses)
+
+
 
 all_with_stipw[            , inches_ltfu:=inches ]
 all_with_stipw[is.na(stipw), inches_ltfu:=NA ]
 
 ## calculate "remean" data prep:
 all_with_stipw[,
-               inches_wtd_remean:= inches_ltfu - 
-                                   mean(inches_ltfu, na.rm=T) + 
+               inches_wtd_remean:= inches_ltfu -
+                                   mean(inches_ltfu, na.rm=T) +
                                    mean(inches_wtd_hadamard , na.rm=T),
                by=age]
 
 
 ## standardize the names selected across all approaches and their resultant  data sets
-selected<-c("newid","age", "ses", 
-            
+selected<-c("newid","age", "ses",
+
             "inches", "inches_wtd_hadamard","inches_wtd_remean", "inches_ltfu", "inches_predicted",
-            
+
             "remaining",
             "stipw",
             "stipw01",
             "stipw01.n",
-            
+
             "approach")
 
   ## Note: we can calulate this post-simulation
@@ -140,7 +156,9 @@ selected<-c("newid","age", "ses",
 
 ##c)  naive-FPC,
 unwtd_fncs      <- dcast(data=wtd_trajectories, formula= newid~age, value.var="inches")
-fpca_unwtd_fncs <- fpca.face(Y=as.matrix(unwtd_fncs)[,-1], argvals=age_vec, knots=79)
+naive_fpc_proc_minutes <- system.time(
+  fpca_unwtd_fncs <- fpca.face(Y=as.matrix(unwtd_fncs)[,-1], argvals=age_vec, knots=79)
+)[3]/60
 naive_fpc       <- data.frame(age=age_vec, V1=fpca_unwtd_fncs$mu, approach="naive_fpc")
 ## combine with long for the prediction:
 ## a little different than previous examples; now we do have individual level curves
@@ -148,9 +166,9 @@ naive_fpc       <- data.frame(age=age_vec, V1=fpca_unwtd_fncs$mu, approach="naiv
 naive_fpc_indiv <- as.data.frame(cbind(1:nrow(fpca_unwtd_fncs$Yhat),fpca_unwtd_fncs$Yhat))
 colnames(naive_fpc_indiv) <- colnames(unwtd_fncs)
 setDT(naive_fpc_indiv)
-naive_fpc <- melt(naive_fpc_indiv,      
-                  id.vars=c("newid"),  
-                  variable.name = "age", 
+naive_fpc <- melt(naive_fpc_indiv,
+                  id.vars=c("newid"),
+                  variable.name = "age",
                   variable.factor=FALSE,
                   value.name="inches_predicted")
 naive_fpc[,approach:="naive_fpc",]
@@ -160,6 +178,9 @@ setkey(naive_fpc, newid, age)
 naive_fpc  <- naive_fpc[all_with_stipw]
 setkey(naive_fpc, newid, age)
 naive_fpc <- subset(naive_fpc, select=selected)
+## add these on post dean:  minutes and number of principle components (npc)
+naive_fpc[, minutes:=naive_fpc_proc_minutes]
+naive_fpc[, number_pc:=fpca_unwtd_fncs$npc]
 
 ## visual checks
 ## ggplot(data=naive_fpc[newid %in% c(2)], aes(x=age, y=inches_predicted, color=factor(newid)))+geom_point()+
@@ -167,10 +188,12 @@ naive_fpc <- subset(naive_fpc, select=selected)
 
 
 ##e) remean - weighted-FPC.
-wtd_remean_fncs <- dcast(data=subset(all_with_stipw, 
+wtd_remean_fncs <- dcast(data=subset(all_with_stipw,
                                      select=c("newid","age","inches_wtd_remean")),
                          formula= newid~age, value.var="inches_wtd_remean")
-fpca_wtd_remean_fncs <- fpca.face(Y=as.matrix(wtd_remean_fncs)[,-1], argvals=age_vec, knots=79)
+weighted_remean_fpc_proc_minutes <- system.time(
+  fpca_wtd_remean_fncs <- fpca.face(Y=as.matrix(wtd_remean_fncs)[,-1], argvals=age_vec, knots=79)
+)[3]/60
 #weighted_fpc <- data.frame(age=age_vec, V1=fpca_wtd_fncs$mu, approach="weighted_fpc")
 ## combine with long for the prediction:
 ## a little different than previous examples; now we do have individual level curves
@@ -179,9 +202,9 @@ weighted_remean_fpc_indiv <- as.data.frame(cbind(1:nrow(fpca_wtd_remean_fncs$Yha
                                                  fpca_wtd_remean_fncs$Yhat))
 colnames(weighted_remean_fpc_indiv) <- colnames(wtd_remean_fncs)
 setDT(weighted_remean_fpc_indiv)
-weighted_remean_fpc <- melt(weighted_remean_fpc_indiv,      
-                     id.vars=c("newid"),  
-                     variable.name = "age", 
+weighted_remean_fpc <- melt(weighted_remean_fpc_indiv,
+                     id.vars=c("newid"),
+                     variable.name = "age",
                      variable.factor=FALSE,
                      value.name="inches_predicted")
 weighted_remean_fpc[,approach:="wtd_remean_fpc",]
@@ -191,11 +214,16 @@ setkey(weighted_remean_fpc, newid, age)
 weighted_remean_fpc <- weighted_remean_fpc[all_with_stipw]
 setkey(weighted_remean_fpc, newid, age)
 weighted_remean_fpc <- subset(weighted_remean_fpc, select=selected)
+## add these on post dean:  minutes and number of principle components (npc)
+weighted_remean_fpc[, minutes:=weighted_remean_fpc_proc_minutes]
+weighted_remean_fpc[, number_pc:=fpca_wtd_remean_fncs$npc]
 
 
 ##e) weighted-FPC.
 wtd_fncs <- dcast(data=wtd_trajectories, formula= newid~age, value.var="inches_wtd_hadamard")
-fpca_wtd_fncs <- fpca.face(Y=as.matrix(wtd_fncs)[,-1], argvals=age_vec, knots=79)
+weighted_fpc_proc_minutes <- system.time(
+  fpca_wtd_fncs <- fpca.face(Y=as.matrix(wtd_fncs)[,-1], argvals=age_vec, knots=79)
+)[3]/60
 #weighted_fpc <- data.frame(age=age_vec, V1=fpca_wtd_fncs$mu, approach="weighted_fpc")
 ## combine with long for the prediction:
 ## a little different than previous examples; now we do have individual level curves
@@ -203,9 +231,9 @@ fpca_wtd_fncs <- fpca.face(Y=as.matrix(wtd_fncs)[,-1], argvals=age_vec, knots=79
 weighted_fpc_indiv <- as.data.frame(cbind(1:nrow(fpca_wtd_fncs$Yhat),fpca_wtd_fncs$Yhat))
 colnames(weighted_fpc_indiv) <- colnames(wtd_fncs)
 setDT(weighted_fpc_indiv)
-weighted_fpc <- melt(weighted_fpc_indiv,      
-                     id.vars=c("newid"),  
-                     variable.name = "age", 
+weighted_fpc <- melt(weighted_fpc_indiv,
+                     id.vars=c("newid"),
+                     variable.name = "age",
                      variable.factor=FALSE,
                      value.name="inches_predicted")
 weighted_fpc[,approach:="wtd_hadamard_fpc",]
@@ -215,7 +243,9 @@ setkey(weighted_fpc, newid, age)
 weighted_fpc <- weighted_fpc[all_with_stipw]
 ## begin extra steps: (weighted inputs average out for mean, but need to be de-weighted for individual)
 setDT(wtd_trajectories)
-wts <- subset(wtd_trajectories, select=c("newid","age","stipw01.n"))
+## pre-DEAN: wts <- subset(wtd_trajectories, select=c("newid","age","stipw01.n"))
+## post-DEAN: subset all_with_stipw
+wts <- subset(all_with_stipw, select=c("newid","age","stipw01.n"))
 setkey(wts, newid, age)
 
 ## can't do curve completion with these three knuckleheads
@@ -240,6 +270,9 @@ setkey(weighted_fpc.test, newid, age)#, inches_predicted_deweighted)
 setnames(weighted_fpc.test, "inches_predicted", "inches_predicted_old")
 setnames(weighted_fpc.test, "inches_predicted_deweighted", "inches_predicted")
 weighted_fpc <- subset(weighted_fpc.test, select=selected)
+## add these on post dean:  minutes and number of principle components (npc)
+weighted_fpc[, minutes:=weighted_fpc_proc_minutes]
+weighted_fpc[, number_pc:=fpca_wtd_fncs$npc]
 
 ## visual checks:
 #  ggplot(data=weighted_fpc[newid %in% c(1,2,5)], aes(x=age, y=inches_predicted, color=factor(newid)))+geom_point()+
@@ -252,11 +285,13 @@ naive_lme<-tryCatch(
 {
   #naive_lme_model<-lme(inches ~ bs(age, df=15), random=~1|newid, data=observed_with_stipw);
   #naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0), approach="naive_lme")
-  
+
   ## for 7*12 timepts and 1000 subjects, df=7 gives warning.  Stay at df=5.
   ## for 7*12 timepts and 5000 subjects, df=5 gives FATAL ERROR for ses_coef=0.05
   ## for 7*12 timepts and 5000 subjects, df=5    is OK          for ses_coef=0.01
-  naive_lme_model<-lmer(inches ~ bs(age, df=5) + (bs(age, df=5)|newid), data=observed_with_stipw);
+    naive_lme_proc_minutes <- system.time(
+  naive_lme_model<-lmer(inches ~ bs(age, df=5) + (bs(age, df=5)|newid), data=observed_with_stipw)
+          )[3]/60
   ## re.form=~0
   #naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), re.form=~0), approach="naive_lme")
   ## re.form=~1
@@ -267,13 +302,15 @@ naive_lme<-tryCatch(
                           inches_wtd_hadamard       = all_with_stipw$inches_wtd_hadamard,
                           inches_wtd_remean         = all_with_stipw$inches_wtd_remean,
                           inches_ltfu      = all_with_stipw$inches_ltfu,
-                          inches_predicted = predict(naive_lme_model, 
+                          inches_predicted = predict(naive_lme_model,
                                                      newdata=all_with_stipw),
                           remaining        = all_with_stipw$remaining,
                           stipw            = all_with_stipw$stipw,
                           stipw01          = all_with_stipw$stipw01,
                           stipw01.n        = all_with_stipw$stipw01.n,
-                          approach="naive_lme")
+                          approach="naive_lme",
+                          minutes          = naive_lme_proc_minutes,
+                          number_pc        = NA)
 },
 warning =function(cond){
   write.csv(observed_with_stipw, paste0("data_that_failed_nlme_lme_fit_",abs(rnorm(1,100,100)),".csv"), row.names=FALSE)
@@ -291,7 +328,9 @@ warning =function(cond){
                           stipw            = all_with_stipw$stipw,
                           stipw01          = all_with_stipw$stipw01,
                           stipw01.n        = all_with_stipw$stipw01.n,
-                          approach="naive_lme")
+                          approach="naive_lme",
+                          minutes          = naive_lme_proc_minutes,
+                          number_pc        = NA)
 },
 error =function(cond){
   write.csv(observed_with_stipw, paste0("data_that_failed_nlme_lme_fit_",abs(rnorm(1,100,100)),".csv"), row.names=FALSE)
@@ -309,12 +348,14 @@ error =function(cond){
                           stipw            = all_with_stipw$stipw,
                           stipw01          = all_with_stipw$stipw01,
                           stipw01.n        = all_with_stipw$stipw01.n,
-                          approach="naive_lme")
+                          approach="naive_lme",
+                          minutes          = naive_lme_proc_minutes,
+                          number_pc        = NA)
 })
 setkey(naive_lme, newid, age)
 # quick checks:
 # summary(naive_lme)
-# ggplot(data=naive_lme[newid %in% c(2)], 
+# ggplot(data=naive_lme[newid %in% c(2)],
 #       aes(x=age, y=inches_predicted, color=factor(newid)))+
 #   geom_point()+
 #   geom_point(aes(y=inches), color='black')
@@ -324,18 +365,20 @@ wtd_remean_lme<-tryCatch(
 {
   #naive_lme_model<-lme(inches ~ bs(age, df=15), random=~1|newid, data=observed_with_stipw);
   #naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), level=0), approach="naive_lme")
-  
-  
-  
+
+
+
 #   wtd_remean_lme_model<-lmer(inches_wtd_remean ~ bs(age, df=15) + (1|newid), data=all_with_stipw,
 #                              na.action=na.omit);
   ## for 7*12 timepts and 1000 subjects, df=7 gives warning.  Stay at df=5.
+      wtd_remean_proc_minutes <- system.time(
   wtd_remean_lme_model<-lmer(inches_wtd_remean ~ bs(age, df=5) + (bs(age, df=5)|newid), data=all_with_stipw,
-                             na.action=na.omit);
+                             na.action=na.omit)
+            )[3]/60
   ## re.form=~0
   #naive_lme <- data.frame(age=age_vec, V1=predict(naive_lme_model, newdata=data.frame(age=age_vec), re.form=~0), approach="naive_lme")
   ## re.form=~1
-  wtd_remean_lme <- 
+  wtd_remean_lme <-
                data.table(newid            = all_with_stipw$newid,
                           age              = all_with_stipw$age,
                           ses              = all_with_stipw$ses,
@@ -343,13 +386,15 @@ wtd_remean_lme<-tryCatch(
                           inches_wtd_hadamard = all_with_stipw$inches_wtd_hadamard,
                           inches_wtd_remean         = all_with_stipw$inches_wtd_remean,
                           inches_ltfu      = all_with_stipw$inches_ltfu,
-                          inches_predicted = predict(wtd_remean_lme_model, 
+                          inches_predicted = predict(wtd_remean_lme_model,
                                                      newdata=all_with_stipw),
                           remaining        = all_with_stipw$remaining,
                           stipw            = all_with_stipw$stipw,
                           stipw01          = all_with_stipw$stipw01,
                           stipw01.n        = all_with_stipw$stipw01.n,
-                          approach="wtd_remean_lme")
+                          approach="wtd_remean_lme",
+                          minutes = wtd_remean_proc_minutes,
+                          number_pc = NA)
 },
 warning =function(cond){
   write.csv(observed_with_stipw, paste0("data_that_failed_nlme_lme_fit_",abs(rnorm(1,100,100)),".csv"), row.names=FALSE)
@@ -367,7 +412,9 @@ warning =function(cond){
                           stipw            = all_with_stipw$stipw,
                           stipw01          = all_with_stipw$stipw01,
                           stipw01.n        = all_with_stipw$stipw01.n,
-                          approach="wtd_remean_lme")
+                          approach="wtd_remean_lme",
+                          minutes = wtd_remean_proc_minutes,
+                          number_pc = NA)
 },
 error =function(cond){
   write.csv(observed_with_stipw, paste0("data_that_failed_nlme_lme_fit_",abs(rnorm(1,100,100)),".csv"), row.names=FALSE)
@@ -385,16 +432,18 @@ error =function(cond){
                           stipw            = all_with_stipw$stipw,
                           stipw01          = all_with_stipw$stipw01,
                           stipw01.n        = all_with_stipw$stipw01.n,
-                          approach="wtd_remean_lme")
+                          approach="wtd_remean_lme",
+                          minutes = wtd_remean_proc_minutes,
+                          number_pc = NA)
 })
 setkey(wtd_remean_lme, newid, age)
 ## quick checks:
 # summary(wtd_remean_lme)
-# ggplot(data=wtd_remean_lme[newid %in% c(2)], 
+# ggplot(data=wtd_remean_lme[newid %in% c(2)],
 #       aes(x=age, y=inches_predicted, color=factor(newid)))+
 #   geom_point()+
 #   geom_point(aes(y=inches), color='black')
-# 
+#
 
 
 ## I have two wtd_lme chunks -- only have one uncommented at a time!
@@ -425,17 +474,17 @@ wtd_lme<-tryCatch(
 
 #   wtd_lme_model<-lmer(inches_wtd_hadamard ~ bs(age, df=15) + (1|newid), data=wtd_trajectories,
 #                       na.action=na.omit)
-  
+  wtd_lme_proc_minutes <- system.time(
   wtd_lme_model<-lmer(inches_wtd_hadamard ~ bs(age, df=5) + (bs(age, df=5)|newid), data=wtd_trajectories,
                       na.action=na.omit)
-  
+  )[3]/60
   ##predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0)
   ##wtd_lme <- data.frame(age=age_vec, V1=predict(wtd_lme_model, newdata=data.frame(age=age_vec), level=0), approach="wtd_lme")
   ## note: below, use re.form=~0 in lme4:predict is equivalent to level=0 in nlme:lme
   ## re.form=~0
   ##wtd_lme <- data.frame(age=age_vec, V1=predict(wtd_lme_model, newdata=data.frame(age=age_vec), re.form=~0), approach="wtd_lme")
-  wtd_lme_pop_mean <- data.frame(age=age_vec, V1=predict(wtd_lme_model, newdata=data.frame(age=age_vec), re.form=~0), approach="wtd_lme")
-  
+  #wtd_lme_pop_mean <- data.frame(age=age_vec, V1=predict(wtd_lme_model, newdata=data.frame(age=age_vec), re.form=~0), approach="wtd_lme")
+
   ## re.form=~1
   wtd_lme1  <- data.table(newid            = all_with_stipw$newid,
                           age              = all_with_stipw$age,
@@ -444,14 +493,14 @@ wtd_lme<-tryCatch(
                           inches_wtd_hadamard       = all_with_stipw$inches_wtd_hadamard,
                           inches_wtd_remean       = all_with_stipw$inches_wtd_remean,
                           inches_ltfu      = all_with_stipw$inches_ltfu,
-                          inches_predicted = predict(wtd_lme_model, 
+                          inches_predicted = predict(wtd_lme_model,
                                                      newdata=all_with_stipw),
                           remaining        = all_with_stipw$remaining,
                           stipw            = all_with_stipw$stipw,
                           stipw01          = all_with_stipw$stipw01,
                           stipw01.n        = all_with_stipw$stipw01.n,
                           approach="wtd_hadamard_lme")
-  
+
   wtd_lme.test<- wts[wtd_lme1]
   ## see how many 0's
   wtd_lme.test[,table(round(stipw01.n,2))]
@@ -468,8 +517,9 @@ wtd_lme<-tryCatch(
   setkey(wtd_lme.test, newid, age)#, inches_predicted_deweighted)
   setnames(wtd_lme.test, "inches_predicted", "inches_predicted_old")
   setnames(wtd_lme.test, "inches_predicted_deweighted", "inches_predicted")
-  wtd_lme <- subset(wtd_lme.test, select=selected)  
-  
+  wtd_lme <- subset(wtd_lme.test, select=selected)
+  wtd_lme[,minutes:=wtd_lme_proc_minutes]
+  wtd_lme[,number_pc:=NA]
   },
 warning =function(cond){
   write.csv(wtd_trajectories, paste0("data_that_failed_lme4_lmer_fit_",abs(rnorm(1,100,100)),".csv"), row.names=FALSE)
@@ -486,7 +536,9 @@ warning =function(cond){
                           stipw            = all_with_stipw$stipw,
                           stipw01          = all_with_stipw$stipw01,
                           stipw01.n        = all_with_stipw$stipw01.n,
-                          approach="wtd_hadamard_lme")
+                          approach="wtd_hadamard_lme",
+                          minutes=wtd_lme_proc_minutes,
+                          number_pc=NA)
 },
 error =function(cond){
   write.csv(wtd_trajectories, paste0("data_that_failed_lme4_lmer_fit_",abs(rnorm(1,100,100)),".csv"), row.names=FALSE)
@@ -503,17 +555,19 @@ error =function(cond){
                           stipw            = all_with_stipw$stipw,
                           stipw01          = all_with_stipw$stipw01,
                           stipw01.n        = all_with_stipw$stipw01.n,
-                          approach="wtd_hadamard_lme")
+                          approach="wtd_hadamard_lme",
+                          minutes=wtd_lme_proc_minutes,
+                          number_pc=NA)
 })
 setkey(wtd_lme, newid, age)
 ## quick checks:
 # summary(wtd_lme)
-# ggplot(data=wtd_lme[newid %in% c(1,2,5)], 
+# ggplot(data=wtd_lme[newid %in% c(1,2,5)],
 #       aes(x=age, y=inches_predicted, color=factor(newid)))+
 #   geom_point()+
 #   geom_point(aes(y=inches_ltfu), color='black')
 # ## see the original predictions, before 'deweighting'
-# ggplot(data=wtd_lme.test[newid %in% c(1,2,5)], 
+# ggplot(data=wtd_lme.test[newid %in% c(1,2,5)],
 #        aes(x=age, y=inches_predicted_old, color=factor(newid)))+
 #   geom_point()+
 #   geom_point(aes(y=inches_ltfu), color='black')
@@ -549,10 +603,10 @@ didya<-dcast(means, newid+age ~ approach, value.var="inches_predicted")
 # key(naive_lme)
 # key(wtd_lme)
 # key(wtd_remean_lme)
-# 
-base.select <- 
-            c("newid","age", "ses", 
-              "inches", "inches_wtd_hadamard","inches_wtd_remean", "inches_ltfu", 
+#
+base.select <-
+            c("newid","age", "ses",
+              "inches", "inches_wtd_hadamard","inches_wtd_remean", "inches_ltfu",
 #               "inches_predicted",
                "remaining",
                "stipw",
@@ -575,7 +629,7 @@ base_means <- base[didya]
 
 ## next three chunks deal with missingness, then we rbind it us with means....
 
-## this is a useful chunk to check the range of 
+## this is a useful chunk to check the range of
 ## probality of being censored (prob.cens)
 #   ddply(censored, .(age), function(w) sum(w$instudy==1) )
 #   melt.prob.cens=ddply(censored, .(newid,age), function(w) w$prob.cens )
@@ -622,14 +676,14 @@ results <- cbind(
 
 
 ## started tinkering with Out Sample predictions...please see `outsample_sim.R`
-# 
+#
 # ##a) naive-nonparametric: that is, just na.rm=TRUE and turn the mean() crank
 # ## the best we can do to predict for those missing is to predict the mean curve for everyone
-# 
-# 
-# 
-# 
-# 
+#
+#
+#
+#
+#
 # ## DO SOME PREDICTIONS
 # ## put the following as function inputs... then remove!
 # oos_sample_size=100
@@ -637,28 +691,28 @@ results <- cbind(
 # oos_ind=as.numeric(names(d[,-1])) <= oos_age
 # oos_timepoints=as.numeric(names(d[,-1]))[oos_ind]
 # oos<-sample_data_fpc(d, oos_sample_size, seed=sim_seed, timepoints=as.numeric(names(d[,-1])))
-# oos.early <- oos 
+# oos.early <- oos
 # oos.early[,!c(TRUE, oos_ind)] <- NA
 # ##oos.early <- rbind(c(999999,fpca_wtd_fncs$mu), oos.early)
-# 
+#
 #   oos.early <- oos[,c(TRUE, oos_ind)]
-# 
-# 
+#
+#
 # oos.late <- oos[,c(TRUE, !oos_ind)]
-# 
+#
 # ##e) weighted-FPC.
 # ##wtd_fncs <- dcast(data=wtd_trajectories, formula= newid~age, value.var="inches_wtd_hadamard")
 # fpca_wtd_fncs_pred_oos <- fpca.face(Y=as.matrix(wtd_fncs[,-1]), Y.pred=as.matrix(oos.early[,-1]), argvals=age_vec, knots=10)
-# 
+#
 # weighted_fpc_pred_oos <- data.frame(age=age_vec, V1=fpca_wtd_fncs_pred_oos$mu, approach="weighted_fpc_pred_oos")
-# 
+#
 # fpca_wtd_fncs_pred_oos$Yhat
 # fpca_wtd_fncs_pred_oos$scores
-# 
+#
 # oos<-sample_data_fpc(d[,c(TRUE,oos_ind)], oos_sample_size, seed=sim_seed, timepoints=oos_timepoints, knots.face=4)
-# 
-# 
-# 
+#
+#
+#
 
 
 
@@ -676,7 +730,23 @@ results <- cbind(
 #       "sim_age_coef", sim_age_coef,
 #       sep="_")
 
+
+idnum1<-abs(round(10000000*rnorm(1)))
+midletter<-sample(letters)[1]
+idnum2<-abs(round(10000000*rnorm(1)))
 ##saveRDS(results,paste0("results_",label,".RDS" ))
-saveRDS(results,paste0("results_",abs(round(10000000*rnorm(1))), 
-                       sample(letters)[1],abs(round(10000000*rnorm(1))), ".RDS" ))
+saveRDS(results,paste0("results_",idnum1, midletter,idnum2, ".RDS"))
+
+
+
+setkey(means, approach)
+proc_minutes_number_pcs<-subset(unique(means),
+                   select=c("approach","minutes","number_pc"))
+
+
+write.csv(proc_minutes_number_pcs,
+        paste0("proc_minutes_number_pcs_",idnum1, midletter,idnum2, ".csv"),
+        row.names=FALSE)
+
+
 }
