@@ -178,8 +178,8 @@ naive_fpc[, minutes:=naive_fpc_proc_minutes]
 naive_fpc[, number_pc:=fpca_unwtd_fncs$npc]
 
 ## visual checks
-# ggplot(data=naive_fpc[newid %in% c(1,2,5)], aes(x=age, y=inches_predicted, color=factor(newid)))+geom_point()+
-#   geom_point(aes(y=inches), color='black')
+#ggplot(data=naive_fpc[newid %in% c(1,2,5,1000)], aes(x=age, y=inches_predicted, color=factor(newid)))+geom_point()+
+#  geom_point(aes(y=inches_ltfu), color='black')
 
 
 ##e) remean - weighted-FPC.
@@ -212,6 +212,11 @@ weighted_remean_fpc <- subset(weighted_remean_fpc, select=selected)
 ## add these on post dean:  minutes and number of principle components (npc)
 weighted_remean_fpc[, minutes:=weighted_remean_fpc_proc_minutes]
 weighted_remean_fpc[, number_pc:=fpca_wtd_remean_fncs$npc]
+## visual checks
+#ggplot(data=weighted_remean_fpc[newid %in% c(1,2,5,1000)], aes(x=age, y=inches_predicted, color=factor(newid)))+geom_point()+
+#  geom_point(aes(y=inches_ltfu), color='black')
+
+
 
 ##e) weighted-FPC.
 wtd_fncs <- dcast(data=wtd_trajectories, formula= newid~age, value.var="inches_wtd_hadamard")
@@ -269,7 +274,8 @@ weighted_fpc[, minutes:=weighted_fpc_proc_minutes]
 weighted_fpc[, number_pc:=fpca_wtd_fncs$npc]
 
 ## visual checks:
-# ggplot(data=weighted_fpc[newid %in% c(1,2,5)], aes(x=age, y=inches_predicted, color=factor(newid)))+geom_point()+
+# ggplot(data=weighted_fpc[newid %in% c(1,2,5,1000)], 
+#        aes(x=age, y=inches_predicted, color=factor(newid)))+geom_point()+
 #   geom_point(aes(y=inches_ltfu), color='black')
 
 
@@ -427,8 +433,8 @@ error =function(cond){
 })
 setkey(wtd_remean_lme, newid, age)
 ## quick checks:
-# summary(naive_lme)
-# ggplot(data=naive_lme[newid %in% c(2)],
+# summary(wtd_remean_lme)
+# ggplot(data=wtd_remean_lme[newid %in% c(1,2,5,1000)],
 #       aes(x=age, y=inches_predicted, color=factor(newid)))+
 #   geom_point()+
 #   geom_point(aes(y=inches), color='black')
@@ -557,7 +563,7 @@ setkey(wtd_lme, newid, age)
 #        aes(x=age, y=inches_predicted_old, color=factor(newid)))+
 #   geom_point()+
 #   geom_point(aes(y=inches_ltfu), color='black')
-
+# 
 
 
 

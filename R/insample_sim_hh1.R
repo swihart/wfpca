@@ -24,7 +24,8 @@ insample_sim_hh1 <- function(sim_seed=101, sample_size=1000, sim_slope=100,
   #simulate_censor_summarize()
 
   ## just for testing; comment out before github commits
-  ##hh_rds='./data_local/hopkins_hybrid.RDS'; sim_seed=101; sample_size=1000; sim_slope=100; sim_intercept=12; sim_ses_coef=.01; sim_age_coef=.01;
+  library(devtools); library(roxygen2); install(); document(); 
+  hh_rds='./data_local/hopkins_hybrid.RDS'; sim_seed=101; sample_size=1000; sim_slope=100; sim_intercept=12; sim_ses_coef=.01; sim_age_coef=.01;
   ##hh_rds='./data_local/hopkins_hybrid.RDS'; sim_seed=101; sample_size=5000; sim_slope=100; sim_intercept=12; sim_ses_coef=.01; sim_age_coef=.01;
   ##hh_rds='./data_local/hopkins_hybrid.RDS'; sim_seed=101; sample_size=5000; sim_slope=100; sim_intercept=12; sim_ses_coef=.005; sim_age_coef=.005;
 
@@ -157,7 +158,7 @@ selected<-c("newid","age", "ses",
 ##c)  naive-FPC,
 unwtd_fncs      <- dcast(data=wtd_trajectories, formula= newid~age, value.var="inches")
 naive_fpc_proc_minutes <- system.time(
-  fpca_unwtd_fncs <- fpca.face(Y=as.matrix(unwtd_fncs)[,-1], argvals=age_vec, knots=79)
+  fpca_unwtd_fncs <- fpca.face(Y=as.matrix(unwtd_fncs)[,-1], argvals=age_vec, knots=7)
 )[3]/60
 naive_fpc       <- data.frame(age=age_vec, V1=fpca_unwtd_fncs$mu, approach="naive_fpc")
 ## combine with long for the prediction:
@@ -183,8 +184,19 @@ naive_fpc[, minutes:=naive_fpc_proc_minutes]
 naive_fpc[, number_pc:=fpca_unwtd_fncs$npc]
 
 ## visual checks
-## ggplot(data=naive_fpc[newid %in% c(2)], aes(x=age, y=inches_predicted, color=factor(newid)))+geom_point()+
-##   geom_point(aes(y=inches_ltfu), color='black')
+# ggplot(data=naive_fpc[newid %in% c(2)], aes(x=age, y=inches_predicted, color=factor(newid)))+geom_point()+
+#   geom_point(aes(y=inches_ltfu), color='black')
+
+
+## visual checks
+# ggplot(data=naive_fpc[newid %in% c(1,2,5)], 
+#        aes(x=age, y=inches_predicted, color=factor(newid)))+
+#   geom_path()+
+#   geom_point()+
+#   geom_line(aes(y=inches_ltfu, id=factor(newid)), color='black' )+
+#   geom_point(aes(y=inches_ltfu, id=factor(newid), shape=factor(newid)), color='black')
+
+
 
 
 ##e) remean - weighted-FPC.
@@ -192,7 +204,7 @@ wtd_remean_fncs <- dcast(data=subset(all_with_stipw,
                                      select=c("newid","age","inches_wtd_remean")),
                          formula= newid~age, value.var="inches_wtd_remean")
 weighted_remean_fpc_proc_minutes <- system.time(
-  fpca_wtd_remean_fncs <- fpca.face(Y=as.matrix(wtd_remean_fncs)[,-1], argvals=age_vec, knots=79)
+  fpca_wtd_remean_fncs <- fpca.face(Y=as.matrix(wtd_remean_fncs)[,-1], argvals=age_vec, knots=7)
 )[3]/60
 #weighted_fpc <- data.frame(age=age_vec, V1=fpca_wtd_fncs$mu, approach="weighted_fpc")
 ## combine with long for the prediction:
@@ -217,12 +229,19 @@ weighted_remean_fpc <- subset(weighted_remean_fpc, select=selected)
 ## add these on post dean:  minutes and number of principle components (npc)
 weighted_remean_fpc[, minutes:=weighted_remean_fpc_proc_minutes]
 weighted_remean_fpc[, number_pc:=fpca_wtd_remean_fncs$npc]
+## visual checks
+ggplot(data=weighted_remean_fpc[newid %in% c(1,2,5)], 
+       aes(x=age, y=inches_predicted, color=factor(newid)))+
+  geom_path()+
+  geom_point()+
+  geom_line(aes(y=inches_ltfu, id=factor(newid)), color='black' )+
+  geom_point(aes(y=inches_ltfu, id=factor(newid), shape=factor(newid)), color='black')
 
 
 ##e) weighted-FPC.
 wtd_fncs <- dcast(data=wtd_trajectories, formula= newid~age, value.var="inches_wtd_hadamard")
 weighted_fpc_proc_minutes <- system.time(
-  fpca_wtd_fncs <- fpca.face(Y=as.matrix(wtd_fncs)[,-1], argvals=age_vec, knots=79)
+  fpca_wtd_fncs <- fpca.face(Y=as.matrix(wtd_fncs)[,-1], argvals=age_vec, knots=7)
 )[3]/60
 #weighted_fpc <- data.frame(age=age_vec, V1=fpca_wtd_fncs$mu, approach="weighted_fpc")
 ## combine with long for the prediction:
@@ -273,11 +292,13 @@ weighted_fpc <- subset(weighted_fpc.test, select=selected)
 ## add these on post dean:  minutes and number of principle components (npc)
 weighted_fpc[, minutes:=weighted_fpc_proc_minutes]
 weighted_fpc[, number_pc:=fpca_wtd_fncs$npc]
-
-## visual checks:
-#  ggplot(data=weighted_fpc[newid %in% c(1,2,5)], aes(x=age, y=inches_predicted, color=factor(newid)))+geom_point()+
-#    geom_point(aes(y=inches_ltfu), color='black')
-
+## visual checks
+ggplot(data=weighted_fpc[newid %in% c(1,2,5, 500, 999,1000)], 
+       aes(x=age, y=inches_predicted, color=factor(newid)))+
+  geom_path()+
+  geom_point()+
+  geom_line(aes(y=inches_ltfu, id=factor(newid)), color='black' )+
+  geom_point(aes(y=inches_ltfu, id=factor(newid), shape=factor(newid)), color='black')
 
 
 ##f) lme
@@ -355,10 +376,14 @@ error =function(cond){
 setkey(naive_lme, newid, age)
 # quick checks:
 # summary(naive_lme)
-# ggplot(data=naive_lme[newid %in% c(2)],
-#       aes(x=age, y=inches_predicted, color=factor(newid)))+
-#   geom_point()+
-#   geom_point(aes(y=inches), color='black')
+## visual checks
+ggplot(data=naive_lme[newid %in% c(1,2,5, 500, 999,1000)], 
+       aes(x=age, y=inches_predicted, color=factor(newid)))+
+  geom_path()+
+  geom_point()+
+  geom_line(aes(y=inches_ltfu, id=factor(newid)), color='black' )+
+  geom_point(aes(y=inches_ltfu, id=factor(newid), shape=factor(newid)), color='black')
+
 
 ##f) weighted_remean_lme
 wtd_remean_lme<-tryCatch(
@@ -439,11 +464,14 @@ error =function(cond){
 setkey(wtd_remean_lme, newid, age)
 ## quick checks:
 # summary(wtd_remean_lme)
-# ggplot(data=wtd_remean_lme[newid %in% c(2)],
-#       aes(x=age, y=inches_predicted, color=factor(newid)))+
-#   geom_point()+
-#   geom_point(aes(y=inches), color='black')
-#
+## visual checks
+ggplot(data=wtd_remean_lme[newid %in% c(1,2,5, 500, 999,1000)], 
+       aes(x=age, y=inches_predicted, color=factor(newid)))+
+  geom_path()+
+  geom_point()+
+  geom_line(aes(y=inches_ltfu, id=factor(newid)), color='black' )+
+  geom_point(aes(y=inches_ltfu, id=factor(newid), shape=factor(newid)), color='black')
+
 
 
 ## I have two wtd_lme chunks -- only have one uncommented at a time!
@@ -562,16 +590,13 @@ error =function(cond){
 setkey(wtd_lme, newid, age)
 ## quick checks:
 # summary(wtd_lme)
-# ggplot(data=wtd_lme[newid %in% c(1,2,5)],
-#       aes(x=age, y=inches_predicted, color=factor(newid)))+
-#   geom_point()+
-#   geom_point(aes(y=inches_ltfu), color='black')
-# ## see the original predictions, before 'deweighting'
-# ggplot(data=wtd_lme.test[newid %in% c(1,2,5)],
-#        aes(x=age, y=inches_predicted_old, color=factor(newid)))+
-#   geom_point()+
-#   geom_point(aes(y=inches_ltfu), color='black')
-
+## visual checks
+ggplot(data=wtd_lme[newid %in% c(1,2,5, 500, 999,1000)], 
+       aes(x=age, y=inches_predicted, color=factor(newid)))+
+  geom_path()+
+  geom_point()+
+  geom_line(aes(y=inches_ltfu, id=factor(newid)), color='black' )+
+  geom_point(aes(y=inches_ltfu, id=factor(newid), shape=factor(newid)), color='black')
 
 
 
