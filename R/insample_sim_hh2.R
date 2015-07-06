@@ -10,13 +10,14 @@
 #' @param sim_intercept see intercept in calculate_ses()
 #' @param sim_ses_coef see ses_coef in apply_censoring()
 #' @param sim_age_coef see age_coef in apply_censoring()
+#' @param censoring_coef used to multiply the prob.cens from the simplog in hh2 runs. Default value is 1.  will try 0.95 and 1.05 for range.
 #' @param hh_rds the path in single quotes to the local copy of hopkins_hybrid.RDS
 #' @export
 #' @return results a data frame with rmse for each approach for that simulated dataset
 #' @examples
 #' ---
 insample_sim_hh2 <- function(sim_seed=101, sample_size=1000, sim_slope=100,
-                                  sim_intercept=12, sim_ses_coef=.01, sim_age_coef=.01,
+                                  sim_intercept=12, sim_ses_coef=.01, sim_age_coef=.01, censoring_coef=1,
                             hh_rds='./data_local/hopkins_hybrid.RDS', 
                             hh_rds_simplog='./data_local/hopkins_hybrid_prob_ltfu_coeffs.RDS', 
                             hh_rds_long='./data_local/hopkins_hybrid_long.RDS'){
@@ -27,7 +28,7 @@ insample_sim_hh2 <- function(sim_seed=101, sample_size=1000, sim_slope=100,
 
   ## just for testing; comment out before github commits
   #library(devtools); library(roxygen2); install(); document(); 
-  #hh_rds_simplog='./data_local/hopkins_hybrid_prob_ltfu_coeffs.RDS';hh_rds_long='./data_local/hopkins_hybrid_long.RDS'; hh_rds='./data_local/hopkins_hybrid.RDS'; sim_seed=101; sample_size=1000; sim_slope=100; sim_intercept=12; sim_ses_coef=.01; sim_age_coef=.01;
+  #sample_size=1000; censoring_coef=1.50; hh_rds_simplog='./data_local/hopkins_hybrid_prob_ltfu_coeffs.RDS';hh_rds_long='./data_local/hopkins_hybrid_long.RDS'; hh_rds='./data_local/hopkins_hybrid.RDS'; sim_seed=101;  sim_slope=100; sim_intercept=12; sim_ses_coef=.01; sim_age_coef=.01;
   
   ## d will be a 187x13 matrix based on the extraction of ./data_local/hopkins_hybrid_prep.R
   ## we oversample d based on the fpc as well extract out the times of measurement
@@ -80,8 +81,9 @@ insample_sim_hh2 <- function(sim_seed=101, sample_size=1000, sim_slope=100,
   whamcast <- long
   setDT(whamcast)
   
-  
-  whamcast[, prob.cens:=predict.glm(simplog, newdata=whamcast, type="response")]
+  ## calculate the prob.cens multiplied by the censoring_coef
+  whamcast[, prob.cens:=predict.glm(simplog, newdata=whamcast, type="response")*censoring_coef]
+  whamcast[, summary(prob.cens)]
   whamcast[, subject_time_index:={ c(1:.N)}, by="newid"]
   protected <- 1:4
   whamcast[subject_time_index %in% protected, prob.cens:=0]
@@ -107,12 +109,13 @@ insample_sim_hh2 <- function(sim_seed=101, sample_size=1000, sim_slope=100,
 #setkey(long, id, time)
 
 setDT(all_with_stipw)
-setkey(all_with_stipw, newid, time)
+setkey(all_with_stipw, newid, time, cd4)
 
 setDT(wtd_trajectories)
-setkey(wtd_trajectories, newid, time)
+setkey(wtd_trajectories, newid, time, cd4)
 
 interim <- wtd_trajectories[all_with_stipw]
+
 
 ## BEGIN:  new step...DEAN:
 key.interim <- unique(interim[,c("time","remaining","denom"), with=FALSE])[!is.na(remaining) & !is.na(remaining)]
@@ -666,7 +669,7 @@ dcast.wtd.trajectories<-dcast(calculate_wtd_trajectories_hh2(calculate_stipw_hh2
 last_time<-as.character(time_vec[length(time_vec)])
 percent.missing.at.time.18=sum(is.na(dcast.wtd.trajectories[last_time]))/length(unlist(dcast.wtd.trajectories[last_time]))
 percent.missing = colSums(is.na(dcast.wtd.trajectories[,-1]))/length(unlist(dcast.wtd.trajectories[last_time]))
-
+percent.missing
 ## below/above median linear predictor...(legacy code `medianSES`):
 dcast.wtd.trajectories<-dcast(calculate_wtd_trajectories_hh2(calculate_stipw_hh2(censored,"keep")), 
                               newid+age+sex+race+hetero+msm+ivdu~time, value.var="stipw")
@@ -696,10 +699,7 @@ percent.missing.above.median=colSums(is.na(subbie))/nrow(subbie)
 results <- cbind(
         sim_seed                     = as.integer(sim_seed),
         sample_size                  = as.integer(sample_size),
-        sim_slope                    = as.integer(sim_slope),
-        sim_intercept                = as.integer(sim_intercept),
-        sim_ses_coef                 = sim_ses_coef,
-        sim_age_coef                 = sim_age_coef,
+        censoring_coef               = censoring_coef,
         perc_ltfu_18                 = percent.missing.at.time.18,
         percent_missing              = percent.missing,
         percent_missing_below_median = percent.missing.below.median[as.character(time_vec)],
@@ -775,8 +775,11 @@ saveRDS(results,paste0("results_",idnum1, midletter,idnum2, ".RDS"))
 
 
 setkey(means, approach)
-proc_minutes_number_pcs<-subset(unique(means),
-                   select=c("approach","minutes","number_pc"))
+proc_minutes_number_pcs<-cbind(subset(unique(means),
+                                      select=c("approach", "minutes","number_pc")),
+                               sample_size=unique(results$sample_size),
+                               censoring_coef=unique(results$censoring_coef)
+)
 
 
 write.csv(proc_minutes_number_pcs,

@@ -7,7 +7,7 @@ fabricated a la the SES of the Growth data.  We will make a _hh2 to do a more re
 \usage{
 insample_sim_hh2(sim_seed = 101, sample_size = 1000, sim_slope = 100,
   sim_intercept = 12, sim_ses_coef = 0.01, sim_age_coef = 0.01,
-  hh_rds = "./data_local/hopkins_hybrid.RDS",
+  censoring_coef = 1, hh_rds = "./data_local/hopkins_hybrid.RDS",
   hh_rds_simplog = "./data_local/hopkins_hybrid_prob_ltfu_coeffs.RDS",
   hh_rds_long = "./data_local/hopkins_hybrid_long.RDS")
 }
@@ -23,6 +23,8 @@ insample_sim_hh2(sim_seed = 101, sample_size = 1000, sim_slope = 100,
 \item{sim_ses_coef}{see ses_coef in apply_censoring()}
 
 \item{sim_age_coef}{see age_coef in apply_censoring()}
+
+\item{censoring_coef}{used to multiply the prob.cens from the simplog in hh2 runs. Default value is 1.  will try 0.95 and 1.05 for range.}
 
 \item{hh_rds}{the path in single quotes to the local copy of hopkins_hybrid.RDS}
 }
