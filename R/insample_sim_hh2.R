@@ -28,7 +28,7 @@ insample_sim_hh2 <- function(sim_seed=101, sample_size=1000, sim_slope=100,
 
   ## just for testing; comment out before github commits
   #library(devtools); library(roxygen2); install(); document(); 
-  #sample_size=1000; censoring_coef=1.50; hh_rds_simplog='./data_local/hopkins_hybrid_prob_ltfu_coeffs.RDS';hh_rds_long='./data_local/hopkins_hybrid_long.RDS'; hh_rds='./data_local/hopkins_hybrid.RDS'; sim_seed=101;  sim_slope=100; sim_intercept=12; sim_ses_coef=.01; sim_age_coef=.01;
+  #sample_size=1000; censoring_coef=1.0; hh_rds_simplog='./data_local/hopkins_hybrid_prob_ltfu_coeffs.RDS';hh_rds_long='./data_local/hopkins_hybrid_long.RDS'; hh_rds='./data_local/hopkins_hybrid.RDS'; sim_seed=101;  sim_slope=100; sim_intercept=12; sim_ses_coef=.01; sim_age_coef=.01;
   
   ## d will be a 187x13 matrix based on the extraction of ./data_local/hopkins_hybrid_prep.R
   ## we oversample d based on the fpc as well extract out the times of measurement
@@ -46,6 +46,7 @@ insample_sim_hh2 <- function(sim_seed=101, sample_size=1000, sim_slope=100,
   ## 2.  take unique() 
   ## 3.  Sample, then rbind covars with over_samp_mat (akin to `with_ses`)
   ## 4.  make it long (akin to `long` from `make_long(with_ses)`)
+  ## 5.  post 2015-07-08:  calc cd4_baseline and cd4_delta
   ## implement:
   ## 1.
   long2<- readRDS(hh_rds_long)
@@ -68,6 +69,7 @@ insample_sim_hh2 <- function(sim_seed=101, sample_size=1000, sim_slope=100,
                     variable="time", value="cd4", value.name="cd4")
   long$time <- as.numeric(long$time)
   long$newid <- long$id
+  ## 5. see below in `whamcast`
   
   ## In this chunk we apply censoring.
   ## censored <- apply_censoring(long, ses_coef=sim_ses_coef, time_coef=sim_time_coef, protected=1:4)
@@ -80,6 +82,12 @@ insample_sim_hh2 <- function(sim_seed=101, sample_size=1000, sim_slope=100,
   
   whamcast <- long
   setDT(whamcast)
+  
+  ## post 2015-07-08 edit: reread cole-cain-2009 and talk with dean to get time-specific intercepts
+  ## try to calculate trajectory specific info
+  whamcast[, cd4_baseline:=cd4[time==1]    , by="newid"]
+  whamcast[, cd4_delta   :=cd4-cd4_baseline, by="newid"]
+  
   
   ## calculate the prob.cens multiplied by the censoring_coef
   whamcast[, prob.cens:=predict.glm(simplog, newdata=whamcast, type="response")*censoring_coef]
@@ -148,8 +156,8 @@ all_with_stipw[is.na(stipw), cd4_ltfu:=NA ]
 ## calculate "remean" data prep:
 all_with_stipw[,
                cd4_wtd_remean:= cd4_ltfu -
-                                   mean(cd4_ltfu, na.rm=T) +
-                                   mean(cd4_wtd_hadamard , na.rm=T),
+                 mean(cd4_ltfu, na.rm=T) +
+                 mean(cd4_wtd_hadamard , na.rm=T),
                by=time]
 
 
@@ -165,7 +173,42 @@ selected<-c("newid","time",
 
             "approach")
 
+visualcheck<-FALSE
+if (visualcheck) {
+## visual checks
+population <- ggplot() +
+  ## the black lines are the OBSERVED/LTFU individual paths
+  geom_path(data=all_with_stipw,#[newid %in% c(1,5,9)], 
+            aes(x=time, y=cd4_ltfu, id=newid)) 
+  ## the blue line is the wtd_average.  It should be on top of the 
+blue_line_wtd_mean <-  geom_line(data=all_with_stipw[,
+                                mean(cd4_wtd_hadamard , na.rm=T),
+                                by=time],
+            aes(x=time, y=V1), color="blue")
+  ## red line is the naive mean.
+red_line_naive_mean <-  geom_line(data=all_with_stipw[,
+                                mean(cd4_ltfu , na.rm=T),
+                                by=time],
+            aes(x=time, y=V1), color="red")
+  ## green line is the full data-mean.  Should coincide with wtd-mean (blueline)
+green_line_full_data_mean <-  geom_line(data=all_with_stipw[,
+                              mean(cd4, na.rm=T),
+                              by=time],
+          aes(x=time, y=V1), color="green")
 
+
+## general population LTFU/observed (overplotted / background for subsequent plots)
+population
+## the full data mean 
+population + green_line_full_data_mean
+## the full data mean (green) AND naive mean (red).  The discrepancy is **bias**
+population + green_line_full_data_mean + red_line_naive_mean
+## the full data mean (green) AND naive mean (red) and BLUE (wtd mean) line, which is right on top of green line.  
+## The blue line being close to the green line is **bias correction**
+population + green_line_full_data_mean + red_line_naive_mean + blue_line_wtd_mean
+## focused:
+population + green_line_full_data_mean + red_line_naive_mean + blue_line_wtd_mean+ ylim(c(300,450)) + xlim(c(5,12))
+}
 
 ##c)  naive-FPC,
 unwtd_fncs      <- dcast(data=wtd_trajectories, formula= newid~time, value.var="cd4")
@@ -383,7 +426,7 @@ error =function(cond){
 setkey(naive_lme, newid, time)
 # quick checks:
 # summary(naive_lme)
-## visual checks
+# # visual checks
 # ggplot(data=naive_lme[newid %in% c(1,2,5, 500, 999,1000)], 
 #        aes(x=time, y=cd4_predicted, color=factor(newid)))+
 #   geom_path()+

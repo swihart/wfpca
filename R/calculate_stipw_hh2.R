@@ -52,9 +52,26 @@ calculate_stipw_hh2 <- function(data_in=NULL, na.action="omit"){
   ## aka STIPW on data_in.sub.  However, if the models only contain baseline info
   ## and not subject-specific time-varying info, we can actually FIT/PREDICT weights
   ## for every single observation, regardless of missing outcomes (inches, cd4,etc)
-  bl.logit.nocov <- glm(instudy~bs(time,intercept=FALSE,df=6)    , family="binomial", data=data_in.sub)
+  ##bl.logit.nocov <- glm(instudy~bs(time,intercept=FALSE,df=6)    , family="binomial", data=data_in.sub)
   #simplog$terms[[3]]
-  bl.logit.ses   <- glm(instudy~bs(time,intercept=FALSE,df=6)+age + sex + race + hetero + msm + ivdu, 
+  ##bl.logit.ses   <- glm(instudy~bs(time,intercept=FALSE,df=6)+age + sex + race + hetero + msm + ivdu, 
+  ##                      family="binomial", data=data_in.sub)
+  
+  ## post 2015-07-08 edit:  re-read Cain and Cole, and talk with Dean
+  ## helped me get "time-specific" intercepts...
+  
+  bl.logit.nocov <- glm(instudy~as.factor(time)-1     , family="binomial", data=data_in.sub)
+  #simplog$terms[[3]]
+  bl.logit.ses   <- glm(instudy~as.factor(time)-1 + 
+                          cd4_baseline + cd4_delta +
+                          age + sex + race + hetero + msm + ivdu, 
+                        family="binomial", data=data_in.sub)
+  
+  ## post 2015-07-08 edit:  re-read Cain and Cole, and talk with Dean
+  ## can still do a stipw02 thing, but only with baseline covariates...
+  bl.logit.base   <- glm(instudy~as.factor(time)-1 + 
+                           cd4_baseline +
+                          age + sex + race + hetero + msm + ivdu, 
                         family="binomial", data=data_in.sub)
   
   #qplot(bl.logit.nocov$fitted);range(bl.logit.nocov$fitted)
@@ -73,13 +90,13 @@ calculate_stipw_hh2 <- function(data_in=NULL, na.action="omit"){
   data_in$bl.fitted.nocov2 <- predict(bl.logit.nocov,
                                       newdata = data_in,
                                       type="response")
-  data_in$bl.fitted.ses2   <- predict(bl.logit.ses,
+  data_in$bl.fitted.base2   <- predict(bl.logit.base,
                                       newdata = data_in,
                                       type="response")
   
   data_in$cumprod.nocov2 <- ave(data_in$bl.fitted.nocov2,data_in$newid,FUN=cumprod)
-  data_in$cumprod.ses2 <- ave(data_in$bl.fitted.ses2,data_in$newid,FUN=cumprod)
-  data_in$stipw2 <- data_in$cumprod.nocov2/data_in$cumprod.ses2
+  data_in$cumprod.base2 <- ave(data_in$bl.fitted.base2,data_in$newid,FUN=cumprod)
+  data_in$stipw2 <- data_in$cumprod.nocov2/data_in$cumprod.base2
   
   ## now sub again so that we only have observed for weight calculation...
   data_in.sub2 <- data_in.sub[data_in.sub$cumsum.ind2==0,]
@@ -87,6 +104,10 @@ calculate_stipw_hh2 <- function(data_in=NULL, na.action="omit"){
   data_in.sub2$cumprod.nocov <- ave(data_in.sub2$bl.fitted.nocov,data_in.sub2$newid,FUN=cumprod)
   data_in.sub2$cumprod.ses <- ave(data_in.sub2$bl.fitted.ses,data_in.sub2$newid,FUN=cumprod)
   data_in.sub2$stipw <- data_in.sub2$cumprod.nocov/data_in.sub2$cumprod.ses
+  
+  ## double check:
+   head(data_in.sub2[data_in.sub2$id==500, c("id","time", "prob.cens", "instudy.sim", "instudy", "bl.fitted.nocov", "bl.fitted.ses","cumprod.nocov", "cumprod.ses", "stipw" )],13)
+  summary(data_in.sub2$stipw)
   
   ## instead of setting this to 0, once weights are calculated for everyone else,
   ## remove the censored line for each individual...
